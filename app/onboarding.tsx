@@ -4,10 +4,12 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { Colors, FontSize, FontWeight, BorderRadius, Shadows } from '../src/constants';
 import { PrimaryButton } from '../src/components';
+import { useTranslation } from 'react-i18next';
 
 const { width } = Dimensions.get('window');
 
 export default function OnboardingScreen() {
+    const { t } = useTranslation();
     return (
         <View style={styles.container}>
             {/* Skip button */}
@@ -17,7 +19,7 @@ export default function OnboardingScreen() {
                     onPress={() => router.replace('/login')}
                     style={styles.skipButton}
                 >
-                    <Text style={styles.skipText}>Passer</Text>
+                    <Text style={styles.skipText}>{t('common.skip')}</Text>
                 </TouchableOpacity>
             </View>
 
@@ -38,11 +40,11 @@ export default function OnboardingScreen() {
             <View style={styles.content}>
                 <View style={styles.textBlock}>
                     <Text style={styles.title}>
-                        Commandez facilement votre{' '}
-                        <Text style={styles.titleGradient}>citerne d'eau</Text>
+                        {t('onboarding.title')}
+                        <Text style={styles.titleGradient}>{t('onboarding.titleHighlight')}</Text>
                     </Text>
                     <Text style={styles.description}>
-                        Livraison rapide et fiable directement à votre domicile ou chantier.
+                        {t('onboarding.description')}
                     </Text>
                 </View>
 
@@ -57,7 +59,7 @@ export default function OnboardingScreen() {
 
                     {/* Button */}
                     <PrimaryButton
-                        title="Suivant"
+                        title={t('common.next')}
                         icon="arrow-forward"
                         onPress={() => router.push('/login')}
                         style={{ width: '100%' }}

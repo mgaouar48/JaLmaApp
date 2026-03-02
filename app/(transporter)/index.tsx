@@ -5,9 +5,11 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { Colors, FontSize, FontWeight, Shadows, BorderRadius } from '../../src/constants';
+import { useTranslation } from 'react-i18next';
 
 export default function TransporterDashboard() {
     const [isOnline, setIsOnline] = useState(true);
+    const { t } = useTranslation();
 
     return (
         <View style={styles.container}>
@@ -43,45 +45,12 @@ export default function TransporterDashboard() {
                             <MaterialIcons name="person" size={20} color={Colors.white} />
                         </View>
                         <View>
-                            <Text style={styles.greeting}>Bonjour,</Text>
+                            <Text style={styles.greeting}>{t('transporter.greeting')}</Text>
                             <Text style={styles.name}>Mamadou</Text>
                         </View>
                     </View>
                     <TouchableOpacity style={styles.notifBtn}>
                         <MaterialIcons name="notifications" size={24} color={Colors.slate600} />
-                    </TouchableOpacity>
-                </View>
-
-                {/* Status Toggle */}
-                <View style={styles.toggleOuter}>
-                    <TouchableOpacity
-                        style={styles.toggleContainer}
-                        onPress={() => setIsOnline(!isOnline)}
-                        activeOpacity={0.8}
-                    >
-                        <View style={styles.toggleLabels}>
-                            <Text style={[styles.toggleLabelText, !isOnline && styles.toggleLabelActive]}>
-                                Hors Ligne
-                            </Text>
-                            <Text style={[styles.toggleLabelText, isOnline && styles.toggleLabelActive]}>
-                                En Ligne
-                            </Text>
-                        </View>
-                        <View
-                            style={[
-                                styles.toggleKnob,
-                                isOnline ? styles.toggleKnobOn : styles.toggleKnobOff,
-                            ]}
-                        >
-                            <MaterialIcons
-                                name={isOnline ? 'radar' : 'power-settings-new'}
-                                size={20}
-                                color={Colors.white}
-                            />
-                            <Text style={styles.toggleKnobText}>
-                                {isOnline ? 'En Ligne' : 'Hors Ligne'}
-                            </Text>
-                        </View>
                     </TouchableOpacity>
                 </View>
 
@@ -92,7 +61,11 @@ export default function TransporterDashboard() {
                     showsVerticalScrollIndicator={false}
                 >
                     {/* Revenue card */}
-                    <View style={styles.revenueCard}>
+                    <TouchableOpacity
+                        style={styles.revenueCard}
+                        onPress={() => router.push('/(transporter)/revenue')}
+                        activeOpacity={0.9}
+                    >
                         <View style={styles.revenueBlob1} />
                         <View style={styles.revenueBlob2} />
                         <View style={styles.revenueHeader}>
@@ -100,7 +73,7 @@ export default function TransporterDashboard() {
                                 <View style={styles.revenueIconBg}>
                                     <MaterialIcons name="payments" size={18} color={Colors.white} />
                                 </View>
-                                <Text style={styles.revenueLabel}>Revenus du jour</Text>
+                                <Text style={styles.revenueLabel}>{t('transporter.todayRevenue')}</Text>
                             </View>
                             <View style={styles.trendBadge}>
                                 <MaterialIcons name="trending-up" size={14} color="#86efac" />
@@ -111,8 +84,8 @@ export default function TransporterDashboard() {
                             <Text style={styles.revenueValue}>12,500</Text>
                             <Text style={styles.revenueCurrency}>DA</Text>
                         </View>
-                        <Text style={styles.revenueSubtext}>Dernière course: il y a 15 min</Text>
-                    </View>
+                        <Text style={styles.revenueSubtext}>{t('transporter.lastTrip')}</Text>
+                    </TouchableOpacity>
 
                     {/* Completed orders card */}
                     <View style={styles.statsCard}>
@@ -121,7 +94,7 @@ export default function TransporterDashboard() {
                                 <View style={styles.statsIconBg}>
                                     <MaterialIcons name="local-shipping" size={18} color={Colors.primary} />
                                 </View>
-                                <Text style={styles.statsLabel}>Commandes terminées</Text>
+                                <Text style={styles.statsLabel}>{t('transporter.completedOrders')}</Text>
                             </View>
                         </View>
                         <View style={styles.statsFooter}>
@@ -138,7 +111,7 @@ export default function TransporterDashboard() {
 
                     {/* Next mission */}
                     <View style={styles.missionSection}>
-                        <Text style={styles.missionTitle}>Prochaine Mission</Text>
+                        <Text style={styles.missionTitle}>{t('transporter.nextMission')}</Text>
                         <View style={styles.missionCard}>
                             <View style={styles.missionInfo}>
                                 <Text style={styles.missionAddress}>Zone 4, Rue du Canal</Text>
@@ -154,10 +127,7 @@ export default function TransporterDashboard() {
                     </View>
                 </ScrollView>
 
-                {/* QR Scanner FAB */}
-                <TouchableOpacity style={styles.qrFab}>
-                    <MaterialIcons name="qr-code-scanner" size={24} color={Colors.white} />
-                </TouchableOpacity>
+
             </View>
         </View>
     );
@@ -487,16 +457,5 @@ const styles = StyleSheet.create({
         backgroundColor: `${Colors.primary}15`,
         alignItems: 'center', justifyContent: 'center',
     },
-    qrFab: {
-        position: 'absolute',
-        right: 24,
-        bottom: 80,
-        width: 56,
-        height: 56,
-        borderRadius: 16,
-        backgroundColor: Colors.slate900,
-        alignItems: 'center',
-        justifyContent: 'center',
-        ...Shadows.float,
-    },
+
 });

@@ -4,8 +4,10 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { Colors, FontSize, FontWeight } from '../src/constants';
+import { useTranslation } from 'react-i18next';
 
 export default function SplashScreen() {
+    const { t } = useTranslation();
     const floatAnim = new Animated.Value(0);
     const spinAnim = new Animated.Value(0);
 
@@ -70,8 +72,8 @@ export default function SplashScreen() {
             </Animated.View>
 
             {/* Title */}
-            <Text style={styles.title}>Ja-Lma</Text>
-            <Text style={styles.subtitle}>L'EAU À VOTRE PORTE</Text>
+            <Text style={styles.title}>{t('common.appName')}</Text>
+            <Text style={styles.subtitle}>{t('common.tagline')}</Text>
 
             {/* Loading spinner */}
             <View style={styles.loaderContainer}>

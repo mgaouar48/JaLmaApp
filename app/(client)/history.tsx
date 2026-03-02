@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform } from '
 import { MaterialIcons } from '@expo/vector-icons';
 import { Colors, FontSize, FontWeight, Shadows, BorderRadius } from '../../src/constants';
 import { OrderCard } from '../../src/components';
+import { useTranslation } from 'react-i18next';
 
 const orders = [
     {
@@ -39,21 +40,29 @@ const orders = [
     },
 ];
 
-const filters = ['Tous', 'En cours', 'Terminé', 'Annulé'];
+const filterKeys = ['all', 'inProgress', 'completed', 'cancelled'] as const;
 
 export default function HistoryScreen() {
-    const [activeFilter, setActiveFilter] = React.useState('Tous');
+    const [activeFilter, setActiveFilter] = React.useState('all');
+    const { t } = useTranslation();
+
+    const filters = filterKeys.map(k => ({ key: k, label: t(`history.${k}`) }));
+
+    const filteredOrders = React.useMemo(() => {
+        if (activeFilter === 'all') return orders;
+        if (activeFilter === 'inProgress') return orders.filter(o => o.status === 'in_progress');
+        if (activeFilter === 'completed') return orders.filter(o => o.status === 'completed');
+        if (activeFilter === 'cancelled') return orders.filter(o => o.status === 'cancelled');
+        return orders;
+    }, [activeFilter]);
 
     return (
         <View style={styles.container}>
             {/* Header */}
             <View style={styles.header}>
                 <View style={styles.headerRow}>
-                    <Text style={styles.headerTitle}>Historique</Text>
-                    <TouchableOpacity style={styles.filterBtn}>
-                        <MaterialIcons name="tune" size={22} color={Colors.primary} />
-                        <View style={styles.filterDot} />
-                    </TouchableOpacity>
+                    <Text style={styles.headerTitle}>{t('history.title')}</Text>
+
                 </View>
             </View>
 
@@ -62,12 +71,12 @@ export default function HistoryScreen() {
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filtersList}>
                     {filters.map((f) => (
                         <TouchableOpacity
-                            key={f}
-                            style={[styles.filterChip, activeFilter === f && styles.filterChipActive]}
-                            onPress={() => setActiveFilter(f)}
+                            key={f.key}
+                            style={[styles.filterChip, activeFilter === f.key && styles.filterChipActive]}
+                            onPress={() => setActiveFilter(f.key)}
                         >
-                            <Text style={[styles.filterChipText, activeFilter === f && styles.filterChipTextActive]}>
-                                {f}
+                            <Text style={[styles.filterChipText, activeFilter === f.key && styles.filterChipTextActive]}>
+                                {f.label}
                             </Text>
                         </TouchableOpacity>
                     ))}
@@ -80,12 +89,19 @@ export default function HistoryScreen() {
                 contentContainerStyle={styles.listContent}
                 showsVerticalScrollIndicator={false}
             >
-                {orders.map((order) => (
-                    <OrderCard key={order.id} {...order} />
-                ))}
+                {filteredOrders.length > 0 ? (
+                    filteredOrders.map((order) => (
+                        <OrderCard key={order.id} {...order} />
+                    ))
+                ) : (
+                    <View style={styles.emptyState}>
+                        <MaterialIcons name="history" size={48} color={Colors.neutral300} />
+                        <Text style={styles.emptyText}>{t('history.noOrders')}</Text>
+                    </View>
+                )}
                 <View style={styles.endIndicator}>
                     <View style={styles.endLine} />
-                    <Text style={styles.endText}>Vous avez vu tout l'historique</Text>
+                    <Text style={styles.endText}>{t('history.endOfHistory')}</Text>
                 </View>
             </ScrollView>
         </View>
@@ -182,5 +198,15 @@ const styles = StyleSheet.create({
     endText: {
         fontSize: FontSize.sm,
         color: Colors.slate500,
+    },
+    emptyState: {
+        alignItems: 'center',
+        paddingVertical: 40,
+        gap: 12,
+    },
+    emptyText: {
+        fontSize: FontSize.base,
+        color: Colors.slate500,
+        fontWeight: FontWeight.medium,
     },
 });

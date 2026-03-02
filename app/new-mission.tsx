@@ -6,8 +6,10 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { Colors, FontSize, FontWeight, BorderRadius, Shadows } from '../src/constants';
 import { PrimaryButton } from '../src/components';
+import { useTranslation } from 'react-i18next';
 
 export default function NewMissionScreen() {
+    const { t } = useTranslation();
     return (
         <View style={styles.container}>
             {/* Map background */}
@@ -39,7 +41,7 @@ export default function NewMissionScreen() {
                 <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
                     <MaterialIcons name="arrow-back" size={20} color={Colors.primary} />
                 </TouchableOpacity>
-                <Text style={styles.topTitle}>Nouvelle Mission</Text>
+                <Text style={styles.topTitle}>{t('newMission.title')}</Text>
                 <View style={{ width: 40 }} />
             </View>
 
@@ -57,7 +59,7 @@ export default function NewMissionScreen() {
                         <Text style={styles.missionRef}>Réf: #JL-312</Text>
                     </View>
                     <View style={styles.urgentBadge}>
-                        <Text style={styles.urgentText}>Urgent</Text>
+                        <Text style={styles.urgentText}>{t('newMission.urgent')}</Text>
                     </View>
                 </View>
 
@@ -73,14 +75,14 @@ export default function NewMissionScreen() {
                     <View style={styles.detailItem}>
                         <MaterialIcons name="schedule" size={16} color={Colors.primary} />
                         <View>
-                            <Text style={styles.detailLabel}>Distance</Text>
+                            <Text style={styles.detailLabel}>{t('newMission.distance')}</Text>
                             <Text style={styles.detailValue}>3.2 km • ~12 min</Text>
                         </View>
                     </View>
                     <View style={styles.detailItem}>
                         <MaterialIcons name="payments" size={16} color={Colors.statusGreen} />
                         <View>
-                            <Text style={styles.detailLabel}>Rémunération</Text>
+                            <Text style={styles.detailLabel}>{t('newMission.remuneration')}</Text>
                             <Text style={[styles.detailValue, { color: Colors.statusGreen, fontWeight: '800' }]}>
                                 2 800 DA
                             </Text>
@@ -95,10 +97,10 @@ export default function NewMissionScreen() {
                         onPress={() => router.back()}
                     >
                         <MaterialIcons name="close" size={20} color={Colors.statusRed} />
-                        <Text style={styles.rejectText}>Refuser</Text>
+                        <Text style={styles.rejectText}>{t('newMission.reject')}</Text>
                     </TouchableOpacity>
                     <PrimaryButton
-                        title="Accepter"
+                        title={t('newMission.accept')}
                         icon="check"
                         variant="accent"
                         onPress={() => router.replace('/(transporter)')}

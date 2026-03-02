@@ -2,18 +2,20 @@ import React from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Colors, FontSize, FontWeight } from '../../src/constants';
+import { useTranslation } from 'react-i18next';
 
 export default function WalletScreen() {
+    const { t } = useTranslation();
     return (
         <View style={styles.container}>
             <View style={styles.header}>
-                <Text style={styles.title}>Portefeuille</Text>
+                <Text style={styles.title}>{t('wallet.title')}</Text>
             </View>
             <View style={styles.content}>
                 <MaterialIcons name="account-balance-wallet" size={64} color={`${Colors.primary}30`} />
-                <Text style={styles.placeholder}>Fonctionnalité à venir</Text>
+                <Text style={styles.placeholder}>{t('wallet.comingSoon')}</Text>
                 <Text style={styles.subtext}>
-                    Gérez vos paiements et vos transactions ici.
+                    {t('wallet.managePayments')}
                 </Text>
             </View>
         </View>

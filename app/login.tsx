@@ -1,14 +1,40 @@
 import React, { useState } from 'react';
 import {
-    View, Text, StyleSheet, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform,
+    View, Text, StyleSheet, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, Alert,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { Colors, FontSize, FontWeight, BorderRadius, Shadows } from '../src/constants';
 import { PrimaryButton, AppTextInput } from '../src/components';
+import { useTranslation } from 'react-i18next';
+import { supabase } from '../src/lib/supabase';
 
 export default function LoginScreen() {
+    const { t } = useTranslation();
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
+    const [loading, setLoading] = useState(false);
+
+    const handleLogin = async () => {
+        if (!email.trim() || !password.trim()) {
+            Alert.alert(t('common.error'), t('auth.fillAllFields'));
+            return;
+        }
+
+        setLoading(true);
+        const { error } = await supabase.auth.signInWithPassword({
+            email: email.trim(),
+            password,
+        });
+        setLoading(false);
+
+        if (error) {
+            Alert.alert(t('common.error'), error.message);
+            return;
+        }
+        // Auth context will auto-route based on role
+    };
 
     return (
         <KeyboardAvoidingView
@@ -26,29 +52,31 @@ export default function LoginScreen() {
                         <MaterialIcons name="water-drop" size={40} color={Colors.primary} />
                         <View style={styles.logoGradient} />
                     </View>
-                    <Text style={styles.title}>Bienvenue chez Ja-Lma</Text>
-                    <Text style={styles.subtitle}>Livraison d'eau pure à domicile</Text>
+                    <Text style={styles.title}>{t('auth.welcomeTitle')}</Text>
+                    <Text style={styles.subtitle}>{t('auth.welcomeSubtitle')}</Text>
                 </View>
 
                 {/* Form */}
                 <View style={styles.form}>
-                    {/* Email / Phone */}
+                    {/* Email */}
                     <View style={styles.fieldGroup}>
-                        <Text style={styles.label}>Email ou Téléphone</Text>
+                        <Text style={styles.label}>{t('auth.emailOrPhone')}</Text>
                         <AppTextInput
                             icon="person-outline"
-                            placeholder="ex: jean@example.com"
+                            placeholder={t('auth.emailPlaceholder')}
                             keyboardType="email-address"
                             autoCapitalize="none"
+                            value={email}
+                            onChangeText={setEmail}
                         />
                     </View>
 
                     {/* Password */}
                     <View style={styles.fieldGroup}>
                         <View style={styles.labelRow}>
-                            <Text style={styles.label}>Mot de passe</Text>
+                            <Text style={styles.label}>{t('auth.password')}</Text>
                             <TouchableOpacity>
-                                <Text style={styles.forgotLink}>Mot de passe oublié ?</Text>
+                                <Text style={styles.forgotLink}>{t('auth.forgotPassword')}</Text>
                             </TouchableOpacity>
                         </View>
                         <AppTextInput
@@ -57,6 +85,8 @@ export default function LoginScreen() {
                             secureTextEntry={!showPassword}
                             rightIcon={showPassword ? 'visibility' : 'visibility-off'}
                             onRightIconPress={() => setShowPassword(!showPassword)}
+                            value={password}
+                            onChangeText={setPassword}
                         />
                     </View>
 
@@ -64,36 +94,18 @@ export default function LoginScreen() {
 
                     {/* Submit */}
                     <PrimaryButton
-                        title="Se connecter"
+                        title={loading ? t('common.loading') : t('auth.login')}
                         icon="arrow-forward"
-                        onPress={() => router.replace('/(client)')}
+                        onPress={handleLogin}
+                        disabled={loading}
                     />
-                </View>
-
-                {/* Social Login */}
-                <View style={styles.socialSection}>
-                    <View style={styles.divider}>
-                        <View style={styles.dividerLine} />
-                        <Text style={styles.dividerText}>Ou continuer avec</Text>
-                        <View style={styles.dividerLine} />
-                    </View>
-                    <View style={styles.socialButtons}>
-                        <TouchableOpacity style={styles.socialBtn}>
-                            <MaterialIcons name="g-translate" size={24} color={Colors.slate700} />
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.socialBtn}>
-                            <MaterialIcons name="apple" size={24} color={Colors.slate700} />
-                        </TouchableOpacity>
-                    </View>
                 </View>
 
                 {/* Footer */}
                 <View style={styles.footer}>
-                    <Text style={styles.footerText}>
-                        Pas encore de compte ?{' '}
-                    </Text>
+                    <Text style={styles.footerText}>{t('auth.noAccount')}{' '}</Text>
                     <TouchableOpacity onPress={() => router.push('/register')}>
-                        <Text style={styles.footerLink}>Créer un compte</Text>
+                        <Text style={styles.footerLink}>{t('auth.createAccount')}</Text>
                     </TouchableOpacity>
                 </View>
 
@@ -101,9 +113,10 @@ export default function LoginScreen() {
                 <TouchableOpacity
                     style={styles.transporterLink}
                     onPress={() => router.push('/transporter-login')}
+                    activeOpacity={0.8}
                 >
-                    <MaterialIcons name="local-shipping" size={16} color={Colors.primary} />
-                    <Text style={styles.transporterLinkText}>Espace Transporteur</Text>
+                    <MaterialIcons name="local-shipping" size={24} color={Colors.primary} />
+                    <Text style={styles.transporterLinkText}>{t('auth.transporterSpace')}</Text>
                 </TouchableOpacity>
             </ScrollView>
         </KeyboardAvoidingView>
@@ -111,127 +124,31 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: Colors.white,
-    },
-    scrollContent: {
-        flexGrow: 1,
-        paddingHorizontal: 32,
-        paddingTop: 60,
-        paddingBottom: 40,
-    },
-    brandSection: {
-        alignItems: 'center',
-        marginBottom: 32,
-    },
+    container: { flex: 1, backgroundColor: Colors.white },
+    scrollContent: { flexGrow: 1, paddingHorizontal: 32, paddingTop: 60, paddingBottom: 40 },
+    brandSection: { alignItems: 'center', marginBottom: 32 },
     logoCircle: {
-        width: 80,
-        height: 80,
-        borderRadius: 40,
+        width: 80, height: 80, borderRadius: 40,
         backgroundColor: `${Colors.primary}15`,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginBottom: 24,
-        overflow: 'hidden',
+        alignItems: 'center', justifyContent: 'center',
+        marginBottom: 24, overflow: 'hidden',
     },
-    logoGradient: {
-        ...StyleSheet.absoluteFillObject,
-        backgroundColor: `${Colors.primary}08`,
-    },
-    title: {
-        fontSize: FontSize['2xl'],
-        fontWeight: FontWeight.bold,
-        color: Colors.slate900,
-        marginBottom: 8,
-    },
-    subtitle: {
-        fontSize: FontSize.sm,
-        color: Colors.slate500,
-    },
-    form: {
-        gap: 24,
-    },
-    fieldGroup: {
-        gap: 8,
-    },
-    label: {
-        fontSize: FontSize.sm,
-        fontWeight: FontWeight.medium,
-        color: Colors.slate700,
-        marginLeft: 4,
-    },
-    labelRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-    },
-    forgotLink: {
-        fontSize: FontSize.xs,
-        fontWeight: FontWeight.semibold,
-        color: Colors.primary,
-    },
-    socialSection: {
-        marginTop: 32,
-    },
-    divider: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingVertical: 8,
-    },
-    dividerLine: {
-        flex: 1,
-        height: 1,
-        backgroundColor: Colors.slate200,
-    },
-    dividerText: {
-        marginHorizontal: 16,
-        fontSize: FontSize.xs,
-        color: Colors.slate400,
-    },
-    socialButtons: {
-        flexDirection: 'row',
-        justifyContent: 'center',
-        gap: 16,
-        marginTop: 24,
-    },
-    socialBtn: {
-        width: 56,
-        height: 56,
-        borderRadius: 28,
-        borderWidth: 1,
-        borderColor: Colors.slate200,
-        backgroundColor: Colors.white,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    footer: {
-        flexDirection: 'row',
-        justifyContent: 'center',
-        marginTop: 32,
-        paddingVertical: 24,
-        borderTopWidth: 1,
-        borderTopColor: Colors.slate100,
-    },
-    footerText: {
-        fontSize: FontSize.sm,
-        color: Colors.slate600,
-    },
-    footerLink: {
-        fontSize: FontSize.sm,
-        fontWeight: FontWeight.bold,
-        color: Colors.primary,
-    },
+    logoGradient: { ...StyleSheet.absoluteFillObject, backgroundColor: `${Colors.primary}08` },
+    title: { fontSize: FontSize['2xl'], fontWeight: FontWeight.bold, color: Colors.slate900, marginBottom: 8 },
+    subtitle: { fontSize: FontSize.sm, color: Colors.slate500 },
+    form: { gap: 24 },
+    fieldGroup: { gap: 8 },
+    label: { fontSize: FontSize.sm, fontWeight: FontWeight.medium, color: Colors.slate700, marginLeft: 4 },
+    labelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+    forgotLink: { fontSize: FontSize.xs, fontWeight: FontWeight.semibold, color: Colors.primary },
+    footer: { flexDirection: 'row', justifyContent: 'center', marginTop: 32, paddingVertical: 24, borderTopWidth: 1, borderTopColor: Colors.slate100 },
+    footerText: { fontSize: FontSize.sm, color: Colors.slate600 },
+    footerLink: { fontSize: FontSize.sm, fontWeight: FontWeight.bold, color: Colors.primary },
     transporterLink: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 8,
-        paddingVertical: 12,
+        flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12,
+        paddingVertical: 16, paddingHorizontal: 24, marginHorizontal: 24, marginBottom: 24,
+        backgroundColor: Colors.white, borderRadius: BorderRadius.xl,
+        borderWidth: 2, borderColor: Colors.primary, ...Shadows.soft,
     },
-    transporterLinkText: {
-        fontSize: FontSize.sm,
-        fontWeight: FontWeight.semibold,
-        color: Colors.primary,
-    },
+    transporterLinkText: { fontSize: FontSize.md, fontWeight: FontWeight.bold, color: Colors.primary },
 });

@@ -3,8 +3,10 @@ import { Platform } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors } from '../../src/constants';
+import { useTranslation } from 'react-i18next';
 
 export default function ClientTabLayout() {
+    const { t } = useTranslation();
     const insets = useSafeAreaInsets();
 
     return (
@@ -39,7 +41,7 @@ export default function ClientTabLayout() {
             <Tabs.Screen
                 name="index"
                 options={{
-                    title: 'Accueil',
+                    title: t('tabs.home'),
                     tabBarIcon: ({ color, size }) => (
                         <MaterialIcons name="dashboard" size={size} color={color} />
                     ),
@@ -48,7 +50,7 @@ export default function ClientTabLayout() {
             <Tabs.Screen
                 name="history"
                 options={{
-                    title: 'Historique',
+                    title: t('tabs.history'),
                     tabBarIcon: ({ color, size }) => (
                         <MaterialIcons name="history" size={size} color={color} />
                     ),
@@ -57,7 +59,7 @@ export default function ClientTabLayout() {
             <Tabs.Screen
                 name="wallet"
                 options={{
-                    title: 'Portefeuille',
+                    title: t('tabs.wallet'),
                     tabBarIcon: ({ color, size }) => (
                         <MaterialIcons name="account-balance-wallet" size={size} color={color} />
                     ),
@@ -66,7 +68,7 @@ export default function ClientTabLayout() {
             <Tabs.Screen
                 name="profile"
                 options={{
-                    title: 'Profil',
+                    title: t('tabs.profile'),
                     tabBarIcon: ({ color, size }) => (
                         <MaterialIcons name="person" size={size} color={color} />
                     ),

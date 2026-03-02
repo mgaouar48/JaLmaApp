@@ -6,16 +6,18 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { Colors, FontSize, FontWeight, BorderRadius, Shadows } from '../src/constants';
 import { PrimaryButton, StarRating, ChipSelector } from '../src/components';
-
-const feedbackTags = [
-    { id: 'punctual', label: '⏰ Ponctualité' },
-    { id: 'service', label: '👍 Service' },
-    { id: 'quality', label: '💧 Qualité de l\'eau' },
-    { id: 'communication', label: '💬 Communication' },
-    { id: 'cleanliness', label: '🧹 Propreté' },
-];
+import { useTranslation } from 'react-i18next';
 
 export default function RatingScreen() {
+    const { t } = useTranslation();
+
+    const feedbackTags = [
+        { id: 'punctual', label: `⏰ ${t('rating.punctuality')}` },
+        { id: 'service', label: `👍 ${t('rating.service')}` },
+        { id: 'quality', label: `💧 ${t('rating.waterQuality')}` },
+        { id: 'communication', label: `💬 ${t('rating.communication')}` },
+        { id: 'cleanliness', label: `🧹 ${t('rating.cleanliness')}` },
+    ];
     return (
         <View style={styles.container}>
             {/* Header */}
@@ -23,7 +25,7 @@ export default function RatingScreen() {
                 <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
                     <MaterialIcons name="arrow-back" size={20} color={Colors.primary} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Évaluation</Text>
+                <Text style={styles.headerTitle}>{t('rating.title')}</Text>
                 <View style={{ width: 40 }} />
             </View>
 
@@ -37,9 +39,9 @@ export default function RatingScreen() {
                     <MaterialIcons name="check-circle" size={56} color={Colors.accent} />
                 </View>
 
-                <Text style={styles.title}>Livraison terminée !</Text>
+                <Text style={styles.title}>{t('rating.deliveryComplete')}</Text>
                 <Text style={styles.subtitle}>
-                    Comment s'est passée votre livraison ?
+                    {t('rating.howWasDelivery')}
                 </Text>
 
                 {/* Driver card */}
@@ -55,22 +57,22 @@ export default function RatingScreen() {
 
                 {/* Star rating */}
                 <View style={styles.ratingSection}>
-                    <Text style={styles.ratingLabel}>Votre évaluation</Text>
+                    <Text style={styles.ratingLabel}>{t('rating.yourRating')}</Text>
                     <StarRating maxStars={5} initialRating={4} size={44} />
                 </View>
 
                 {/* Tags */}
                 <View style={styles.tagSection}>
-                    <Text style={styles.tagLabel}>Qu'avez-vous apprécié ?</Text>
+                    <Text style={styles.tagLabel}>{t('rating.whatDidYouLike')}</Text>
                     <ChipSelector options={feedbackTags} />
                 </View>
 
                 {/* Comment */}
                 <View style={styles.commentSection}>
-                    <Text style={styles.commentLabel}>Commentaire (optionnel)</Text>
+                    <Text style={styles.commentLabel}>{t('rating.commentOptional')}</Text>
                     <TextInput
                         style={styles.commentInput}
-                        placeholder="Partagez votre expérience..."
+                        placeholder={t('rating.shareFeedback')}
                         placeholderTextColor={Colors.slate400}
                         multiline
                         numberOfLines={4}
@@ -80,7 +82,7 @@ export default function RatingScreen() {
 
                 {/* Submit */}
                 <PrimaryButton
-                    title="Envoyer"
+                    title={t('rating.submit')}
                     icon="send"
                     variant="accent"
                     onPress={() => router.replace('/(client)')}
