@@ -3,6 +3,7 @@ import {
     View, Text, StyleSheet, Platform, TouchableOpacity, FlatList, RefreshControl,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, FontSize, FontWeight, BorderRadius, Shadows } from '../../src/constants';
 import { useTranslation } from 'react-i18next';
 import { supabase } from '../../src/lib/supabase';
@@ -21,6 +22,7 @@ interface Order {
     estimated_price: number | null;
     created_at: string;
     client_name?: string;
+    client_phone?: string;
 }
 
 const STATUS_CONFIG: Record<string, { color: string; bg: string; icon: keyof typeof MaterialIcons.glyphMap; labelKey: string }> = {
@@ -44,7 +46,7 @@ export default function MissionsScreen() {
             // Get session directly from supabase to ensure we have the latest token
             const { data: { session: currentSession } } = await supabase.auth.getSession();
             const userId = currentSession?.user?.id;
-            
+
             if (!userId) {
                 console.log('[Missions] No user session found');
                 setLoading(false);
@@ -69,22 +71,26 @@ export default function MissionsScreen() {
 
             // Fetch client names
             const clientIds = [...new Set((data || []).map(o => o.client_id))];
-            let clientMap: Record<string, string> = {};
+            let clientMap: Record<string, { name: string; phone: string }> = {};
             if (clientIds.length > 0) {
                 const { data: profiles } = await supabase
                     .from('profiles')
-                    .select('id, first_name, last_name')
+                    .select('id, first_name, last_name, phone')
                     .in('id', clientIds);
                 if (profiles) {
                     profiles.forEach(p => {
-                        clientMap[p.id] = `${p.first_name ?? ''} ${p.last_name ?? ''}`.trim() || t('common.unknown');
+                        clientMap[p.id] = {
+                            name: `${p.first_name ?? ''} ${p.last_name ?? ''}`.trim() || t('common.unknown'),
+                            phone: p.phone ?? '',
+                        };
                     });
                 }
             }
 
             const enriched = (data || []).map(o => ({
                 ...o,
-                client_name: clientMap[o.client_id] || t('common.unknown'),
+                client_name: clientMap[o.client_id]?.name || t('common.unknown'),
+                client_phone: clientMap[o.client_id]?.phone || '',
             }));
 
             setOrders(enriched);
@@ -195,7 +201,12 @@ export default function MissionsScreen() {
                         style={styles.startBtn}
                         onPress={() => router.push({
                             pathname: '/active-delivery',
-                            params: { orderId: item.id },
+                            params: {
+                                orderId: item.id,
+                                clientName: item.client_name,
+                                clientPhone: item.client_phone,
+                                clientAddress: item.delivery_address ?? '',
+                            },
                         })}
                     >
                         <MaterialIcons name="navigation" size={18} color={Colors.white} />
@@ -208,13 +219,22 @@ export default function MissionsScreen() {
 
     return (
         <View style={styles.container}>
-            {/* Header */}
-            <View style={styles.header}>
-                <Text style={styles.title}>{t('missions.title')}</Text>
-                <TouchableOpacity onPress={onRefresh} style={styles.refreshBtn}>
-                    <MaterialIcons name="refresh" size={22} color={Colors.primary} />
-                </TouchableOpacity>
-            </View>
+            {/* Dark gradient header */}
+            <LinearGradient colors={['#0f172a', '#1e293b']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.header}>
+                <View style={styles.glowCircle} />
+                <View style={styles.decorCircle1} />
+                <View style={styles.headerContent}>
+                    <View style={styles.headerLeft}>
+                        <View style={styles.headerIconRing}>
+                            <MaterialIcons name="assignment" size={22} color="#22c55e" />
+                        </View>
+                        <Text style={styles.title}>{t('missions.title')}</Text>
+                    </View>
+                    <TouchableOpacity onPress={onRefresh} style={styles.refreshBtn}>
+                        <MaterialIcons name="refresh" size={22} color="rgba(255,255,255,0.7)" />
+                    </TouchableOpacity>
+                </View>
+            </LinearGradient>
 
             {/* Filters */}
             <View style={styles.filterRow}>
@@ -264,29 +284,15 @@ export default function MissionsScreen() {
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: Colors.backgroundLight,
-    },
-    header: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 24,
-        paddingTop: Platform.OS === 'ios' ? 60 : 48,
-        paddingBottom: 16,
-        backgroundColor: Colors.white,
-    },
-    title: {
-        fontSize: FontSize['2xl'],
-        fontWeight: FontWeight.bold,
-        color: Colors.textDark,
-    },
-    refreshBtn: {
-        width: 40, height: 40, borderRadius: 20,
-        backgroundColor: `${Colors.primary}10`,
-        alignItems: 'center', justifyContent: 'center',
-    },
+    container: { flex: 1, backgroundColor: '#f8fafc' },
+    header: { paddingTop: Platform.OS === 'ios' ? 52 : 40, paddingBottom: 16, overflow: 'hidden' },
+    glowCircle: { position: 'absolute', top: -30, left: '50%', marginLeft: -80, width: 160, height: 160, borderRadius: 80, backgroundColor: 'rgba(34,197,94,0.08)' },
+    decorCircle1: { position: 'absolute', top: -20, right: -30, width: 130, height: 130, borderRadius: 65, backgroundColor: 'rgba(255,255,255,0.03)' },
+    headerContent: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 8 },
+    headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+    headerIconRing: { width: 38, height: 38, borderRadius: 10, backgroundColor: 'rgba(34,197,94,0.15)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(34,197,94,0.25)' },
+    title: { fontSize: FontSize.xl, fontWeight: '800' as any, color: Colors.white },
+    refreshBtn: { width: 38, height: 38, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.08)', alignItems: 'center', justifyContent: 'center' },
     filterRow: {
         flexDirection: 'row',
         paddingHorizontal: 24,

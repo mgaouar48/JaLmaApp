@@ -4,6 +4,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Colors, FontSize, FontWeight, BorderRadius, Shadows } from '../src/constants';
 import { PrimaryButton } from '../src/components';
@@ -46,6 +47,7 @@ export default function OrderConfigScreen() {
     const [showFullMap, setShowFullMap] = useState(false);
     const fullMapRef = useRef<MapView>(null);
     const insets = useSafeAreaInsets();
+    const [driverPhone, setDriverPhone] = useState('');
 
     // Location state
     const mapRef = useRef<MapView>(null);
@@ -69,20 +71,39 @@ export default function OrderConfigScreen() {
 
     useEffect(() => {
         (async () => {
-            let { status } = await Location.requestForegroundPermissionsAsync();
-            if (status !== 'granted') return;
-            setLocationGranted(true);
-            let loc = await Location.getCurrentPositionAsync({});
-            const coord = {
-                latitude: loc.coords.latitude,
-                longitude: loc.coords.longitude,
-            };
-            userLocation.current = coord;
-            setPinCoordinate(coord);
-            const newRegion = { ...coord, latitudeDelta: 0.008, longitudeDelta: 0.008 };
-            setMapRegion(newRegion);
-            mapRef.current?.animateToRegion(newRegion, 500);
+            try {
+                let { status } = await Location.requestForegroundPermissionsAsync();
+                if (status !== 'granted') return;
+
+                let loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+                const coord = {
+                    latitude: loc.coords.latitude,
+                    longitude: loc.coords.longitude,
+                };
+                userLocation.current = coord;
+                setPinCoordinate(coord);
+                const newRegion = { ...coord, latitudeDelta: 0.008, longitudeDelta: 0.008 };
+                setMapRegion(newRegion);
+                mapRef.current?.animateToRegion(newRegion, 500);
+
+                setTimeout(() => setLocationGranted(true), 500);
+            } catch (err) {
+                console.log('Location error:', err);
+                setTimeout(() => setLocationGranted(true), 500);
+            }
         })();
+
+        // Fetch driver phone
+        if (params.transporterId) {
+            supabase
+                .from('profiles')
+                .select('phone')
+                .eq('id', params.transporterId)
+                .single()
+                .then(({ data }) => {
+                    if (data?.phone) setDriverPhone(data.phone);
+                });
+        }
     }, []);
 
     useEffect(() => {
@@ -127,25 +148,59 @@ export default function OrderConfigScreen() {
 
     return (
         <View style={styles.container}>
-            {/* Header */}
-            <View style={styles.header}>
+            {/* Blue gradient header */}
+            <LinearGradient colors={['#0A4FAD', '#1565C0', '#1A73E8']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.header}>
+                <View style={styles.decorCircle1} />
+                <View style={styles.decorCircle2} />
                 <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-                    <MaterialIcons name="arrow-back" size={20} color={Colors.primary} />
+                    <MaterialIcons name="arrow-back" size={22} color="rgba(255,255,255,0.85)" />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>{t('orderConfig.orderFor', { name: transporterName })}</Text>
-                <View style={{ width: 40 }} />
-            </View>
+                {/* Transporter mini-card in header */}
+                <View style={styles.headerTransporterRow}>
+                    <View style={styles.headerAvatar}>
+                        <Text style={styles.headerAvatarText}>
+                            {(params.transporterFirstName?.[0] ?? '?').toUpperCase()}{(params.transporterLastName?.[0] ?? '?').toUpperCase()}
+                        </Text>
+                    </View>
+                    <View>
+                        <Text style={styles.headerLabel}>{t('orderConfig.orderFor', { name: '' })}</Text>
+                        <Text style={styles.headerName}>{transporterName}</Text>
+                    </View>
+                </View>
+            </LinearGradient>
 
             <ScrollView
                 style={styles.scroll}
                 contentContainerStyle={styles.scrollContent}
                 showsVerticalScrollIndicator={false}
             >
+                {/* Transporter info card */}
+                <View style={styles.transporterInfoCard}>
+                    <View style={styles.transporterInfoLeft}>
+                        <MaterialIcons name="local-shipping" size={20} color="#1A73E8" />
+                        <View>
+                            <Text style={styles.transporterInfoName}>{transporterName}</Text>
+                            <Text style={styles.transporterInfoMeta}>
+                                {transporterCapacity.toLocaleString('fr-FR')} L · {transporterPrice.toLocaleString('fr-FR')} DA
+                            </Text>
+                        </View>
+                    </View>
+                    <View style={styles.onlineBadge}>
+                        <View style={styles.onlineDot} />
+                        <Text style={styles.onlineText}>En ligne</Text>
+                    </View>
+                </View>
+
                 {/* Volume Selection */}
-                <Text style={styles.sectionTitle}>{t('orderConfig.waterVolume')}</Text>
-                <Text style={styles.sectionDesc}>
-                    {t('orderConfig.selectCapacity')}
-                </Text>
+                <View style={styles.sectionHeader}>
+                    <View style={styles.sectionIconBg}>
+                        <MaterialIcons name="water-drop" size={16} color="#1A73E8" />
+                    </View>
+                    <View>
+                        <Text style={styles.sectionTitle}>{t('orderConfig.waterVolume')}</Text>
+                        <Text style={styles.sectionDesc}>{t('orderConfig.selectCapacity')}</Text>
+                    </View>
+                </View>
 
                 <View style={styles.volumeList}>
                     {volumes.map((vol) => {
@@ -197,9 +252,18 @@ export default function OrderConfigScreen() {
                 </View>
 
                 {/* Promo Code Section */}
-                <Text style={[styles.sectionTitle, { marginTop: 32 }]}>{t('orderConfig.promoCode')}</Text>
+                <View style={[styles.sectionHeader, { marginTop: 28 }]}>
+                    <View style={[styles.sectionIconBg, { backgroundColor: '#fef9ec' }]}>
+                        <MaterialIcons name="local-offer" size={16} color="#d97706" />
+                    </View>
+                    <View>
+                        <Text style={styles.sectionTitle}>{t('orderConfig.promoCode')}</Text>
+                        <Text style={styles.sectionDesc}>Réduction instantanée sur votre commande</Text>
+                    </View>
+                </View>
                 <View style={styles.promoContainer}>
                     <View style={styles.promoInputWrapper}>
+                        <MaterialIcons name="confirmation-number" size={18} color={Colors.slate400} style={{ marginLeft: 12 }} />
                         <TextInput
                             style={styles.promoInput}
                             placeholder={t('orderConfig.enterPromo')}
@@ -213,29 +277,38 @@ export default function OrderConfigScreen() {
                         />
                     </View>
                     <TouchableOpacity
-                        style={[styles.applyBtn, !promoCode && styles.applyBtnDisabled]}
+                        style={[!promoCode && styles.applyBtnDisabled]}
                         onPress={handleApplyPromo}
                         disabled={!promoCode}
                     >
-                        <Text style={styles.applyBtnText}>{t('orderConfig.apply')}</Text>
+                        <LinearGradient
+                            colors={promoCode ? ['#0A4FAD', '#1565C0', '#1A73E8'] : ['#cbd5e1', '#cbd5e1', '#cbd5e1']}
+                            start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                            style={styles.applyBtn}
+                        >
+                            <Text style={styles.applyBtnText}>{t('orderConfig.apply')}</Text>
+                        </LinearGradient>
                     </TouchableOpacity>
                 </View>
                 {promoMessage && (
-                    <Text style={[
-                        styles.promoMessage,
-                        promoMessage.type === 'error' ? styles.promoError : styles.promoSuccess
-                    ]}>
-                        {promoMessage.text}
-                    </Text>
+                    <View style={[styles.promoMessageRow, promoMessage.type === 'error' ? styles.promoErrorRow : styles.promoSuccessRow]}>
+                        <MaterialIcons name={promoMessage.type === 'error' ? 'error-outline' : 'check-circle'} size={16} color={promoMessage.type === 'error' ? '#ef4444' : '#16a34a'} />
+                        <Text style={[styles.promoMessage, promoMessage.type === 'error' ? styles.promoError : styles.promoSuccess]}>
+                            {promoMessage.text}
+                        </Text>
+                    </View>
                 )}
 
                 {/* Delivery Location */}
-                <Text style={[styles.sectionTitle, { marginTop: 32 }]}>
-                    {t('orderConfig.deliveryLocation')}
-                </Text>
-                <Text style={styles.sectionDesc}>
-                    {t('orderConfig.enterAddressOrPin')}
-                </Text>
+                <View style={[styles.sectionHeader, { marginTop: 28 }]}>
+                    <View style={[styles.sectionIconBg, { backgroundColor: '#fff0f0' }]}>
+                        <MaterialIcons name="place" size={16} color="#ef4444" />
+                    </View>
+                    <View>
+                        <Text style={styles.sectionTitle}>{t('orderConfig.deliveryLocation')}</Text>
+                        <Text style={styles.sectionDesc}>{t('orderConfig.enterAddressOrPin')}</Text>
+                    </View>
+                </View>
 
                 {/* Editable address input */}
                 <View style={styles.addressInputCard}>
@@ -408,8 +481,8 @@ export default function OrderConfigScreen() {
                                     },
                                 });
                                 if (error) throw error;
-                                router.push({
-                                    pathname: '/live-tracking',
+                                router.replace({
+                                    pathname: '/waiting-for-driver',
                                     params: {
                                         orderId: data?.order_id,
                                         transporterFirstName: params.transporterFirstName || '',
@@ -419,6 +492,7 @@ export default function OrderConfigScreen() {
                                         transporterPrice: String(transporterPrice),
                                         transporterLat: params.transporterLat || String(TLEMCEN.latitude + 0.008),
                                         transporterLon: params.transporterLon || String(TLEMCEN.longitude - 0.006),
+                                        transporterPhone: driverPhone,
                                     },
                                 });
                             } catch (err: any) {
@@ -437,50 +511,33 @@ export default function OrderConfigScreen() {
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: Colors.backgroundLight,
-    },
-    header: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 20,
-        paddingTop: Platform.OS === 'ios' ? 56 : 48,
-        paddingBottom: 16,
-        backgroundColor: Colors.white,
-        borderBottomWidth: 1,
-        borderBottomColor: Colors.slate100,
-    },
-    backBtn: {
-        width: 40, height: 40, borderRadius: 20,
-        backgroundColor: `${Colors.primary}10`,
-        alignItems: 'center', justifyContent: 'center',
-    },
-    headerTitle: {
-        fontSize: FontSize.lg,
-        fontWeight: FontWeight.bold,
-        color: Colors.primary,
-    },
-    scroll: {
-        flex: 1,
-    },
-    scrollContent: {
-        paddingHorizontal: 24,
-        paddingTop: 24,
-        paddingBottom: 120,
-    },
-    sectionTitle: {
-        fontSize: FontSize.lg,
-        fontWeight: FontWeight.bold,
-        color: Colors.slate800,
-        marginBottom: 4,
-    },
-    sectionDesc: {
-        fontSize: FontSize.sm,
-        color: Colors.slate500,
-        marginBottom: 20,
-    },
+    container: { flex: 1, backgroundColor: '#f8fafc' },
+    // Header
+    header: { paddingTop: Platform.OS === 'ios' ? 52 : 40, paddingBottom: 20, overflow: 'hidden' },
+    decorCircle1: { position: 'absolute', top: -40, right: -40, width: 160, height: 160, borderRadius: 80, backgroundColor: 'rgba(255,255,255,0.07)' },
+    decorCircle2: { position: 'absolute', bottom: -30, left: 60, width: 120, height: 120, borderRadius: 60, backgroundColor: 'rgba(255,255,255,0.05)' },
+    backBtn: { position: 'absolute', top: Platform.OS === 'ios' ? 52 : 40, left: 16, width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center', zIndex: 10 },
+    headerTransporterRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingTop: 10, gap: 12, justifyContent: 'center' },
+    headerAvatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: 'rgba(255,255,255,0.35)' },
+    headerAvatarText: { fontSize: FontSize.base, fontWeight: '800' as any, color: Colors.white },
+    headerLabel: { fontSize: FontSize.xs, color: 'rgba(255,255,255,0.7)', fontWeight: FontWeight.medium },
+    headerName: { fontSize: FontSize.lg, fontWeight: '800' as any, color: Colors.white },
+    // Scroll
+    scroll: { flex: 1 },
+    scrollContent: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 130 },
+    // Transporter info card
+    transporterInfoCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: Colors.white, borderRadius: 14, padding: 14, marginBottom: 24, borderWidth: 1, borderColor: '#e8edf5', ...Shadows.soft },
+    transporterInfoLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+    transporterInfoName: { fontSize: FontSize.base, fontWeight: '700' as any, color: Colors.slate800 },
+    transporterInfoMeta: { fontSize: FontSize.xs, color: Colors.slate500, marginTop: 2 },
+    onlineBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#f0fdf4', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20 },
+    onlineDot: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: '#22c55e' },
+    onlineText: { fontSize: FontSize.xs, fontWeight: '700' as any, color: '#16a34a' },
+    // Section header
+    sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 14 },
+    sectionIconBg: { width: 36, height: 36, borderRadius: 10, backgroundColor: '#EBF2FF', alignItems: 'center', justifyContent: 'center' },
+    sectionTitle: { fontSize: FontSize.base, fontWeight: '700' as any, color: Colors.slate800, marginBottom: 1 },
+    sectionDesc: { fontSize: FontSize.xs, color: Colors.slate400 },
     volumeList: {
         gap: 12,
     },
@@ -672,46 +729,49 @@ const styles = StyleSheet.create({
     },
     promoInputWrapper: {
         flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
         backgroundColor: Colors.white,
         borderRadius: BorderRadius.lg,
         borderWidth: 1,
         borderColor: Colors.slate200,
-        paddingHorizontal: 16,
-        justifyContent: 'center',
         height: 50,
+        gap: 8,
     },
     promoInput: {
+        flex: 1,
         fontSize: FontSize.base,
         color: Colors.slate800,
         fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
+        paddingRight: 12,
     },
     applyBtn: {
-        backgroundColor: Colors.primary,
         borderRadius: BorderRadius.lg,
         paddingHorizontal: 20,
         justifyContent: 'center',
         alignItems: 'center',
         height: 50,
+        overflow: 'hidden',
+        shadowColor: '#1A73E8',
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.25,
+        shadowRadius: 8,
+        elevation: 4,
     },
     applyBtnDisabled: {
-        backgroundColor: Colors.slate300,
+        opacity: 0.55,
     },
     applyBtnText: {
         color: Colors.white,
         fontWeight: FontWeight.bold,
         fontSize: FontSize.sm,
     },
-    promoMessage: {
-        fontSize: FontSize.sm,
-        marginTop: 8,
-        marginLeft: 4,
-    },
-    promoSuccess: {
-        color: Colors.statusGreen || '#10b981',
-    },
-    promoError: {
-        color: Colors.statusRed || '#ef4444',
-    },
+    promoMessageRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10, padding: 10, borderRadius: 10 },
+    promoSuccessRow: { backgroundColor: '#f0fdf4' },
+    promoErrorRow: { backgroundColor: '#fef2f2' },
+    promoMessage: { fontSize: FontSize.sm, flex: 1 },
+    promoSuccess: { color: '#16a34a', fontWeight: FontWeight.semibold },
+    promoError: { color: '#ef4444', fontWeight: FontWeight.semibold },
     // Expand button on mini map
     expandBtn: {
         position: 'absolute',

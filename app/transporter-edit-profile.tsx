@@ -3,6 +3,7 @@ import {
     View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, Alert,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { Colors, FontSize, FontWeight, BorderRadius, Shadows } from '../src/constants';
 import { PrimaryButton, AppTextInput, ChipSelector } from '../src/components';
@@ -25,12 +26,13 @@ const GENDER_OPTIONS = [
 
 export default function TransporterEditProfileScreen() {
     const { t } = useTranslation();
-    const { session, profile } = useAuth();
+    const { session, profile, refreshProfile } = useAuth();
     const [saving, setSaving] = useState(false);
 
     // Profile fields
     const [firstName, setFirstName] = useState('');
     const [lastName, setLastName] = useState('');
+    const [phone, setPhone] = useState('');
     const [email, setEmail] = useState('');
     const [gender, setGender] = useState<string[]>([]);
 
@@ -42,6 +44,7 @@ export default function TransporterEditProfileScreen() {
         if (profile) {
             setFirstName(profile.first_name ?? '');
             setLastName(profile.last_name ?? '');
+            setPhone(profile.phone ?? '');
             setEmail(profile.email ?? '');
             if (profile.gender) setGender([profile.gender]);
         }
@@ -79,6 +82,7 @@ export default function TransporterEditProfileScreen() {
                 .update({
                     first_name: firstName.trim(),
                     last_name: lastName.trim(),
+                    phone: phone.trim() || null,
                     email: email.trim() || null,
                     gender: gender[0] ?? null,
                     updated_at: new Date().toISOString(),
@@ -100,6 +104,8 @@ export default function TransporterEditProfileScreen() {
                 if (driverError) throw driverError;
             }
 
+            await refreshProfile();
+
             Alert.alert(
                 t('common.success'),
                 t('editProfile.updateSuccess'),
@@ -114,14 +120,20 @@ export default function TransporterEditProfileScreen() {
 
     return (
         <View style={styles.container}>
-            {/* Header */}
-            <View style={styles.header}>
+            {/* Dark gradient header */}
+            <LinearGradient colors={['#0f172a', '#1e293b']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.header}>
+                <View style={styles.glowCircle} />
+                <View style={styles.decorCircle1} />
                 <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-                    <MaterialIcons name="arrow-back" size={20} color={Colors.primary} />
+                    <MaterialIcons name="arrow-back" size={22} color="rgba(255,255,255,0.8)" />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>{t('editProfile.title')}</Text>
-                <View style={{ width: 40 }} />
-            </View>
+                <View style={styles.headerContent}>
+                    <View style={styles.headerIconRing}>
+                        <MaterialIcons name="edit" size={22} color="#22c55e" />
+                    </View>
+                    <Text style={styles.headerTitle}>{t('editProfile.title')}</Text>
+                </View>
+            </LinearGradient>
 
             <ScrollView
                 contentContainerStyle={styles.scrollContent}
@@ -157,6 +169,18 @@ export default function TransporterEditProfileScreen() {
                                 placeholder={t('auth.lastNamePlaceholder')}
                             />
                         </View>
+                    </View>
+
+                    {/* Phone */}
+                    <View style={styles.fieldGroup}>
+                        <Text style={styles.label}>{t('auth.phoneNumber')}</Text>
+                        <AppTextInput
+                            value={phone}
+                            onChangeText={setPhone}
+                            placeholder="0555 123 456"
+                            keyboardType="phone-pad"
+                            icon="phone"
+                        />
                     </View>
 
                     {/* Email */}
@@ -230,28 +254,14 @@ export default function TransporterEditProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: Colors.backgroundLight },
-    header: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 20,
-        paddingTop: Platform.OS === 'ios' ? 56 : 48,
-        paddingBottom: 16,
-        backgroundColor: Colors.white,
-        borderBottomWidth: 1,
-        borderBottomColor: Colors.slate100,
-    },
-    backBtn: {
-        width: 40, height: 40, borderRadius: 20,
-        backgroundColor: `${Colors.primary}10`,
-        alignItems: 'center', justifyContent: 'center',
-    },
-    headerTitle: {
-        fontSize: FontSize.lg,
-        fontWeight: FontWeight.bold,
-        color: Colors.primary,
-    },
+    container: { flex: 1, backgroundColor: '#f8fafc' },
+    header: { paddingTop: Platform.OS === 'ios' ? 52 : 40, paddingBottom: 20, overflow: 'hidden' },
+    glowCircle: { position: 'absolute', top: -30, left: '50%', marginLeft: -80, width: 160, height: 160, borderRadius: 80, backgroundColor: 'rgba(34,197,94,0.08)' },
+    decorCircle1: { position: 'absolute', top: -20, right: -30, width: 130, height: 130, borderRadius: 65, backgroundColor: 'rgba(255,255,255,0.03)' },
+    backBtn: { position: 'absolute', top: Platform.OS === 'ios' ? 52 : 40, left: 16, width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.1)', alignItems: 'center', justifyContent: 'center', zIndex: 10 },
+    headerContent: { alignItems: 'center', paddingTop: 8, gap: 6 },
+    headerIconRing: { width: 48, height: 48, borderRadius: 24, backgroundColor: 'rgba(34,197,94,0.15)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(34,197,94,0.25)' },
+    headerTitle: { fontSize: FontSize.xl, fontWeight: '800' as any, color: Colors.white },
     saveBtnGhost: {
         paddingVertical: 8, paddingHorizontal: 12,
     },

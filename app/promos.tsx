@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import {
-    View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, Alert, Image
+    View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, Alert,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { Colors, FontSize, FontWeight, BorderRadius, Shadows } from '../src/constants';
-import { PrimaryButton } from '../src/components';
 import { usePromo } from '../src/context/PromoContext';
 import { useTranslation } from 'react-i18next';
 
@@ -69,14 +69,20 @@ export default function PromosScreen() {
 
     return (
         <View style={styles.container}>
-            {/* Header */}
-            <View style={styles.header}>
+            {/* Gradient header */}
+            <LinearGradient colors={['#0A4FAD', '#1565C0', '#1A73E8']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.header}>
+                <View style={styles.decorCircle1} />
+                <View style={styles.decorCircle2} />
                 <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-                    <MaterialIcons name="arrow-back" size={20} color={Colors.primary} />
+                    <MaterialIcons name="arrow-back" size={22} color="rgba(255,255,255,0.85)" />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>{t('promos.title')}</Text>
-                <View style={{ width: 40 }} />
-            </View>
+                <View style={styles.headerContent}>
+                    <View style={styles.headerIconRing}>
+                        <MaterialIcons name="local-offer" size={28} color={Colors.white} />
+                    </View>
+                    <Text style={styles.headerTitle}>{t('promos.title')}</Text>
+                </View>
+            </LinearGradient>
 
             <ScrollView contentContainerStyle={styles.content}>
                 <Text style={styles.subtitle}>{t('promos.available')}</Text>
@@ -124,31 +130,14 @@ export default function PromosScreen() {
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: Colors.backgroundLight,
-    },
-    header: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 20,
-        paddingTop: Platform.OS === 'ios' ? 56 : 48,
-        paddingBottom: 16,
-        backgroundColor: Colors.white,
-        borderBottomWidth: 1,
-        borderBottomColor: Colors.slate100,
-    },
-    backBtn: {
-        width: 40, height: 40, borderRadius: 20,
-        backgroundColor: `${Colors.primary}10`,
-        alignItems: 'center', justifyContent: 'center',
-    },
-    headerTitle: {
-        fontSize: FontSize.lg,
-        fontWeight: FontWeight.bold,
-        color: Colors.primary,
-    },
+    container: { flex: 1, backgroundColor: '#f8fafc' },
+    header: { paddingTop: Platform.OS === 'ios' ? 52 : 40, paddingBottom: 24, overflow: 'hidden' },
+    decorCircle1: { position: 'absolute', top: -40, right: -40, width: 160, height: 160, borderRadius: 80, backgroundColor: 'rgba(255,255,255,0.07)' },
+    decorCircle2: { position: 'absolute', bottom: -20, left: -30, width: 120, height: 120, borderRadius: 60, backgroundColor: 'rgba(255,255,255,0.05)' },
+    backBtn: { position: 'absolute', top: Platform.OS === 'ios' ? 52 : 40, left: 16, width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center', zIndex: 10 },
+    headerContent: { alignItems: 'center', paddingTop: 8, gap: 8 },
+    headerIconRing: { width: 56, height: 56, borderRadius: 28, backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center' },
+    headerTitle: { fontSize: FontSize.xl, fontWeight: '800' as any, color: Colors.white },
     content: {
         padding: 24,
     },

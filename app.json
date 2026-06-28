@@ -21,10 +21,18 @@
           "location",
           "fetch"
         ]
+      },
+      "config": {
+        "googleMapsApiKey": "AIzaSyA8NtMXb8BiwzmYyLmjByTyEVpfP1Z0x4g"
       }
     },
     "android": {
       "package": "com.jalma.app",
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyA8NtMXb8BiwzmYyLmjByTyEVpfP1Z0x4g"
+        }
+      },
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"

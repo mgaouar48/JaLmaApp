@@ -20,6 +20,28 @@ export default {
         unknown: 'Unknown',
     },
 
+    waiting: {
+        title: 'Waiting for Driver',
+        subtitle: 'Your request has been sent. Please wait...',
+        driver: 'Driver',
+        waitingConfirmation: 'Waiting for confirmation',
+        cancel: 'Cancel order',
+        cancelTitle: 'Cancel order?',
+        cancelMsg: 'Are you sure you want to cancel this order?',
+        driverDeclined: 'Order declined',
+        driverDeclinedMsg: 'The driver declined your request. Please choose another one.',
+    },
+
+    incoming: {
+        title: 'New Order!',
+        subtitle: 'A client is waiting for your confirmation',
+        client: 'Client',
+        distance: 'Distance',
+        eta: 'ETA',
+        accept: 'Accept',
+        decline: 'Decline',
+    },
+
     // ── Onboarding ──
     onboarding: {
         title: 'Easily order your ',
@@ -39,6 +61,7 @@ export default {
         noAccount: "Don't have an account?",
         createAccount: 'Create an account',
         transporterSpace: 'Transporter Space',
+        clientSpace: 'Client Space',
         registerTitle: 'Create an account',
         registerSubtitle: 'Join Ja-Lma for simplified water delivery',
         lastName: 'LAST NAME',
@@ -186,6 +209,8 @@ export default {
         lastTrip: 'Last Trip',
         completedOrders: 'Completed Orders',
         nextMission: 'Next Mission',
+        weeklyRevenue: 'Weekly Revenue',
+        days: 'days',
         documentsPopupTitle: 'Required Documents',
         documentsPopupSubtitle: 'To start receiving orders, please upload your official documents.',
         carteGrise: 'Vehicle Registration',
@@ -218,6 +243,8 @@ export default {
         completed: 'Completed',
         cancelled: 'Cancelled',
         noOrders: 'No orders found',
+        noOrdersSub: 'Your orders will appear here once placed.',
+        noAddress: 'Address not specified',
         endOfHistory: "You've seen all history",
     },
 
@@ -256,12 +283,19 @@ export default {
         title: 'Edit profile',
         firstNameLabel: 'First name',
         lastNameLabel: 'Last name',
+        email: 'Email',
         emailLabel: 'Email',
+        phoneLabel: 'Phone number',
         dobLabel: 'Date of birth (optional)',
+        dob: 'Date of birth (optional)',
         genderLabel: 'Gender',
+        gender: 'Gender',
         male: 'Male',
         female: 'Female',
         saveChanges: 'Save changes',
+        updateSuccess: 'Your profile has been updated successfully.',
+        invalidEmail: 'Invalid email address.',
+        requiredFields: 'Please fill in the required fields.',
     },
 
     // ── Help & Support ──
@@ -269,12 +303,31 @@ export default {
         title: 'Help & Support',
         faqTitle: 'Frequently asked questions',
         contactTitle: 'Contact us',
+        contactUs: 'Contact us',
+        supportEmail: 'Support email',
+        sendEmail: 'Send an email',
+        reportProblem: 'Report a problem',
+        bugDescription: 'Found a bug or encountered an issue? Send us a report and we will fix it as soon as possible.',
+        reportBug: 'Report a bug',
+        dangerZone: 'Danger zone',
+        deleteWarning: 'Deleting your account is irreversible. All your data will be permanently erased.',
+        deleteMyAccount: 'Delete my account',
+        deleteAccount: 'Delete account',
+        deleteAccountConfirm: 'Are you sure you want to delete your account? This action is irreversible.',
+        delete: 'Delete',
+        accountDeleted: 'Account deleted',
+        accountDeletedMsg: 'Your account has been successfully deleted.',
     },
 
     // ── About ──
     about: {
         title: 'About',
         version: 'Version',
+        tagline: 'Your water, delivered home',
+        appVersion: 'App version',
+        lastUpdate: 'Last update',
+        followUs: 'Follow us',
+        copyright: '© 2026 Ja-Lma. All rights reserved.',
     },
 
     // ── Rating ──
@@ -322,6 +375,15 @@ export default {
         completed: 'Completed',
         cancelled: 'Cancelled',
         totalAmount: 'Total amount',
+        client: 'Client',
+        deliveryAddress: 'Delivery address',
+        liters: 'L',
+        startDelivery: 'Start delivery',
+        statusAssigned: 'Assigned',
+        statusOnRoute: 'On route',
+        statusCompleted: 'Completed',
+        statusCancelled: 'Cancelled',
+        statusPending: 'Pending',
     },
 
     // ── Revenue ──
@@ -336,4 +398,15 @@ export default {
         noTransactions: 'No transactions',
         trips: 'trips',
     },
+
+    // ── Tabs ──
+    tabs: {
+        home: 'Home',
+        dashboard: 'Dashboard',
+        missions: 'Missions',
+        revenue: 'Revenue',
+        profile: 'Profile',
+        history: 'History',
+    },
 } as const;
+

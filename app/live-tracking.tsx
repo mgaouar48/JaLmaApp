@@ -3,6 +3,7 @@ import {
     View, Text, StyleSheet, TouchableOpacity, Platform, Linking,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Colors, FontSize, FontWeight, BorderRadius, Shadows } from '../src/constants';
 import MapView, { PROVIDER_GOOGLE, Marker } from 'react-native-maps';
@@ -24,6 +25,7 @@ export default function LiveTrackingScreen() {
         transporterPrice?: string;
         transporterLat?: string;
         transporterLon?: string;
+        transporterPhone?: string;
     }>();
 
     const driverName = params.transporterFirstName && params.transporterLastName
@@ -31,6 +33,7 @@ export default function LiveTrackingScreen() {
         : 'Ahmed Bensaid';
     const driverRating = params.transporterRating ? parseFloat(params.transporterRating) : 4.8;
     const driverCapacity = params.transporterCapacity ? parseInt(params.transporterCapacity) : 3000;
+    const driverPhone = params.transporterPhone || '';
 
     const [userLocation, setUserLocation] = useState({
         latitude: TLEMCEN.latitude,
@@ -76,7 +79,9 @@ export default function LiveTrackingScreen() {
     }, []);
 
     const handleCall = () => {
-        Linking.openURL('tel:+213655123456');
+        if (driverPhone) {
+            Linking.openURL(`tel:${driverPhone.replace(/\s/g, '')}`);
+        }
     };
 
     return (
@@ -182,13 +187,24 @@ export default function LiveTrackingScreen() {
                             <Text style={styles.vehicleInfo}>Citerne {driverCapacity.toLocaleString('fr-FR')}L</Text>
                         </View>
                     </View>
+                    {driverPhone ? (
+                        <TouchableOpacity style={styles.callBtnSmall} onPress={handleCall}>
+                            <MaterialIcons name="phone" size={20} color={Colors.white} />
+                        </TouchableOpacity>
+                    ) : null}
                 </View>
 
                 {/* Action buttons */}
                 <View style={styles.actions}>
-                    <TouchableOpacity style={styles.callBtn} onPress={handleCall}>
-                        <MaterialIcons name="phone" size={20} color={Colors.white} />
-                        <Text style={styles.callText}>{t('tracking.call')}</Text>
+                    <TouchableOpacity style={styles.callBtn} onPress={handleCall} activeOpacity={0.88}>
+                        <LinearGradient
+                            colors={['#0A4FAD', '#1565C0', '#1A73E8']}
+                            start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                            style={styles.callBtnGradient}
+                        >
+                            <MaterialIcons name="phone" size={20} color={Colors.white} />
+                            <Text style={styles.callText}>{t('tracking.call')}</Text>
+                        </LinearGradient>
                     </TouchableOpacity>
                     <TouchableOpacity
                         style={styles.cancelBtn}
@@ -367,6 +383,12 @@ const styles = StyleSheet.create({
         alignItems: 'center', justifyContent: 'center',
     },
     driverDetails: { flex: 1 },
+    callBtnSmall: {
+        width: 42, height: 42, borderRadius: 21,
+        backgroundColor: Colors.statusGreen,
+        alignItems: 'center', justifyContent: 'center',
+        ...Shadows.floatSm,
+    },
     driverName: {
         fontSize: FontSize.base,
         fontWeight: FontWeight.bold,
@@ -401,15 +423,22 @@ const styles = StyleSheet.create({
         gap: 12,
     },
     callBtn: {
+        flex: 1,
+        borderRadius: 14,
+        overflow: 'hidden',
+        shadowColor: '#1A73E8',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 10,
+        elevation: 5,
+    },
+    callBtnGradient: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
         gap: 8,
-        backgroundColor: Colors.primary,
-        flex: 1,
         paddingVertical: 14,
-        borderRadius: BorderRadius.lg,
-        ...Shadows.button,
+        borderRadius: 14,
     },
     callText: {
         color: Colors.white,

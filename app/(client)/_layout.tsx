@@ -57,15 +57,6 @@ export default function ClientTabLayout() {
                 }}
             />
             <Tabs.Screen
-                name="wallet"
-                options={{
-                    title: t('tabs.wallet'),
-                    tabBarIcon: ({ color, size }) => (
-                        <MaterialIcons name="account-balance-wallet" size={size} color={color} />
-                    ),
-                }}
-            />
-            <Tabs.Screen
                 name="profile"
                 options={{
                     title: t('tabs.profile'),

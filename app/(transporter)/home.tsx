@@ -3,6 +3,7 @@ import {
     View, Text, StyleSheet, TouchableOpacity, Platform, Alert, Modal, Animated,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors, FontSize, FontWeight, BorderRadius, Shadows } from '../../src/constants';
 import { useTranslation } from 'react-i18next';
@@ -88,17 +89,24 @@ export default function TransporterHomeScreen() {
 
     useEffect(() => {
         (async () => {
-            let { status } = await Location.requestForegroundPermissionsAsync();
-            if (status !== 'granted') return;
-            setLocationGranted(true);
-            let loc = await Location.getCurrentPositionAsync({});
-            setLocation(loc);
-            mapRef.current?.animateToRegion({
-                latitude: loc.coords.latitude,
-                longitude: loc.coords.longitude,
-                latitudeDelta: 0.01,
-                longitudeDelta: 0.01,
-            }, 1000);
+            try {
+                let { status } = await Location.requestForegroundPermissionsAsync();
+                if (status !== 'granted') return;
+
+                let loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+                setLocation(loc);
+                mapRef.current?.animateToRegion({
+                    latitude: loc.coords.latitude,
+                    longitude: loc.coords.longitude,
+                    latitudeDelta: 0.01,
+                    longitudeDelta: 0.01,
+                }, 1000);
+
+                setTimeout(() => setLocationGranted(true), 500);
+            } catch (err) {
+                console.log('Location error:', err);
+                setTimeout(() => setLocationGranted(true), 500);
+            }
         })();
     }, []);
 
@@ -240,16 +248,20 @@ export default function TransporterHomeScreen() {
                 <Animated.View style={[styles.modalOverlay, { opacity: fadeAnim }]}>
                     <Animated.View style={[styles.modalCard, { transform: [{ translateY: slideAnim }] }]}>
                         {/* Header icon */}
-                        <View style={styles.modalIconContainer}>
+                        <LinearGradient
+                            colors={['#14532d', '#166534', '#22c55e']}
+                            start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                            style={styles.modalIconContainer}
+                        >
                             <MaterialIcons name="folder-open" size={36} color={Colors.white} />
-                        </View>
+                        </LinearGradient>
 
                         <Text style={styles.modalTitle}>{t('transporter.documentsPopupTitle')}</Text>
                         <Text style={styles.modalSubtitle}>{t('transporter.documentsPopupSubtitle')}</Text>
 
                         {/* TEST CREDENTIALS */}
-                        <TouchableOpacity 
-                            style={styles.testContainer} 
+                        <TouchableOpacity
+                            style={styles.testContainer}
                             onPress={() => {
                                 setUploadedDocs({ carteGrise: true, permisConduire: true, autorisation: true });
                             }}
@@ -286,25 +298,27 @@ export default function TransporterHomeScreen() {
                                     ]}>{doc.label}</Text>
                                     <TouchableOpacity
                                         style={[
-                                            styles.uploadBtn,
+                                            styles.uploadBtnWrapper,
                                             uploadedDocs[doc.key] && styles.uploadBtnDone,
                                         ]}
                                         onPress={() => handleUploadDoc(doc.key)}
                                         disabled={uploadedDocs[doc.key]}
                                     >
-                                        <MaterialIcons
-                                            name={uploadedDocs[doc.key] ? 'check' : 'cloud-upload'}
-                                            size={16}
-                                            color={uploadedDocs[doc.key] ? Colors.statusGreen : Colors.white}
-                                        />
-                                        <Text style={[
-                                            styles.uploadBtnText,
-                                            uploadedDocs[doc.key] && styles.uploadBtnTextDone,
-                                        ]}>
-                                            {uploadedDocs[doc.key]
-                                                ? t('transporter.uploaded')
-                                                : t('transporter.uploadDocument')}
-                                        </Text>
+                                        {uploadedDocs[doc.key] ? (
+                                            <>
+                                                <MaterialIcons name="check" size={16} color={Colors.statusGreen} />
+                                                <Text style={styles.uploadBtnTextDone}>{t('transporter.uploaded')}</Text>
+                                            </>
+                                        ) : (
+                                            <LinearGradient
+                                                colors={['#14532d', '#166534', '#22c55e']}
+                                                start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                                                style={styles.uploadBtn}
+                                            >
+                                                <MaterialIcons name="cloud-upload" size={16} color={Colors.white} />
+                                                <Text style={styles.uploadBtnText}>{t('transporter.uploadDocument')}</Text>
+                                            </LinearGradient>
+                                        )}
                                     </TouchableOpacity>
                                 </View>
                             ))}
@@ -313,13 +327,19 @@ export default function TransporterHomeScreen() {
                         {/* Submit button */}
                         <TouchableOpacity
                             style={[
-                                styles.submitDocsBtn,
+                                styles.submitDocsBtnWrapper,
                                 !Object.values(uploadedDocs).every(v => v) && styles.submitDocsBtnDisabled,
                             ]}
                             onPress={handleSubmitDocuments}
                         >
-                            <MaterialIcons name="send" size={18} color={Colors.white} />
-                            <Text style={styles.submitDocsBtnText}>{t('transporter.submitDocuments')}</Text>
+                            <LinearGradient
+                                colors={['#14532d', '#166534', '#22c55e']}
+                                start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                                style={styles.submitDocsBtn}
+                            >
+                                <MaterialIcons name="send" size={18} color={Colors.white} />
+                                <Text style={styles.submitDocsBtnText}>{t('transporter.submitDocuments')}</Text>
+                            </LinearGradient>
                         </TouchableOpacity>
 
                         {/* Do it later */}
@@ -442,11 +462,15 @@ const styles = StyleSheet.create({
         width: 68,
         height: 68,
         borderRadius: 34,
-        backgroundColor: Colors.primary,
         alignItems: 'center',
         justifyContent: 'center',
         marginBottom: 16,
-        ...Shadows.float,
+        overflow: 'hidden',
+        shadowColor: '#22c55e',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 5,
     },
     modalTitle: {
         fontSize: FontSize.xl,
@@ -509,17 +533,29 @@ const styles = StyleSheet.create({
     docLabelDone: {
         color: Colors.statusGreen,
     },
+    uploadBtnWrapper: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        borderRadius: BorderRadius.full,
+        overflow: 'hidden',
+    },
     uploadBtn: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 6,
-        backgroundColor: Colors.primary,
         paddingHorizontal: 14,
         paddingVertical: 8,
         borderRadius: BorderRadius.full,
     },
     uploadBtnDone: {
         backgroundColor: `${Colors.statusGreen}15`,
+        paddingHorizontal: 14,
+        paddingVertical: 8,
+        borderRadius: BorderRadius.full,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
     },
     uploadBtnText: {
         fontSize: FontSize.xs,
@@ -527,7 +563,19 @@ const styles = StyleSheet.create({
         color: Colors.white,
     },
     uploadBtnTextDone: {
+        fontSize: FontSize.xs,
+        fontWeight: FontWeight.bold,
         color: Colors.statusGreen,
+    },
+    submitDocsBtnWrapper: {
+        width: '100%',
+        borderRadius: BorderRadius.full,
+        overflow: 'hidden',
+        shadowColor: '#22c55e',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 10,
+        elevation: 5,
     },
     submitDocsBtn: {
         flexDirection: 'row',
@@ -535,10 +583,8 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         gap: 8,
         width: '100%',
-        backgroundColor: Colors.primary,
         paddingVertical: 16,
         borderRadius: BorderRadius.full,
-        ...Shadows.float,
     },
     submitDocsBtnDisabled: {
         opacity: 0.5,

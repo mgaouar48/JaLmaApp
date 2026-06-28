@@ -3,12 +3,14 @@ import {
     View, Text, StyleSheet, TouchableOpacity, Platform, Linking, Alert,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Colors, FontSize, FontWeight, BorderRadius, Shadows } from '../src/constants';
 import MapView, { PROVIDER_GOOGLE, Marker } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
+import { supabase } from '../src/lib/supabase';
 
 // Tlemcen center as fallback
 const TLEMCEN = { latitude: 34.8828, longitude: -1.3148 };
@@ -48,6 +50,7 @@ export default function ActiveDeliveryScreen() {
     const [progress, setProgress] = useState(0.05);
     const [eta, setEta] = useState(15);
     const [arrived, setArrived] = useState(false);
+    const [finalizing, setFinalizing] = useState(false);
 
     // Driver position stays in Tlemcen for simulation
     // (real GPS would move it outside the simulation area → blue map)
@@ -94,12 +97,49 @@ export default function ActiveDeliveryScreen() {
         Linking.openURL(`tel:${clientPhone.replace(/\s/g, '')}`);
     };
 
-    const handleFinalize = () => {
-        Alert.alert(
-            t('delivery.deliveryComplete'),
-            t('delivery.orderFinalized', { orderId }),
-            [{ text: t('common.ok'), onPress: () => router.back() }]
-        );
+    const handleFinalize = async () => {
+        if (!orderId || finalizing) return;
+        setFinalizing(true);
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const driverId = session?.user?.id;
+
+            // Step 1 : assigned → on_route (required by DB transition rule)
+            const { error: err1 } = await supabase
+                .from('orders')
+                .update({ status: 'on_route' })
+                .eq('id', orderId);
+            if (err1) throw err1;
+
+            // Step 2 : on_route → completed + set price + timestamp
+            const { error: err2 } = await supabase
+                .from('orders')
+                .update({
+                    status: 'completed',
+                    final_price: 1200,
+                    completed_at: new Date().toISOString(),
+                })
+                .eq('id', orderId);
+            if (err2) throw err2;
+
+            // Mark driver as available again
+            if (driverId) {
+                await supabase
+                    .from('drivers')
+                    .update({ is_available: true })
+                    .eq('id', driverId);
+            }
+
+            Alert.alert(
+                t('delivery.deliveryComplete'),
+                t('delivery.orderFinalized', { orderId }),
+                [{ text: t('common.ok'), onPress: () => router.back() }]
+            );
+        } catch (err: any) {
+            Alert.alert(t('common.error'), err.message || 'Erreur lors de la finalisation.');
+        } finally {
+            setFinalizing(false);
+        }
     };
 
     const handleRecenter = () => {
@@ -243,18 +283,33 @@ export default function ActiveDeliveryScreen() {
                 <View style={styles.actions}>
                     {arrived ? (
                         <TouchableOpacity
-                            style={styles.finalizeBtn}
+                            style={[styles.finalizeBtn, finalizing && { opacity: 0.7 }]}
                             onPress={handleFinalize}
                             activeOpacity={0.85}
+                            disabled={finalizing}
                         >
-                            <MaterialIcons name="check-circle" size={22} color={Colors.white} />
-                            <Text style={styles.finalizeBtnText}>{t('delivery.finalizeDelivery')}</Text>
+                            <LinearGradient
+                                colors={['#14532d', '#166534', '#22c55e']}
+                                start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                                style={styles.finalizeBtnGradient}
+                            >
+                                <MaterialIcons name="check-circle" size={22} color={Colors.white} />
+                                <Text style={styles.finalizeBtnText}>
+                                    {finalizing ? t('common.loading') : t('delivery.finalizeDelivery')}
+                                </Text>
+                            </LinearGradient>
                         </TouchableOpacity>
                     ) : (
                         <>
-                            <TouchableOpacity style={styles.callFullBtn} onPress={handleCall}>
-                                <MaterialIcons name="phone" size={20} color={Colors.white} />
-                                <Text style={styles.callFullText}>{t('tracking.call')}</Text>
+                            <TouchableOpacity style={styles.callFullBtn} onPress={handleCall} activeOpacity={0.88}>
+                                <LinearGradient
+                                    colors={['#14532d', '#166534', '#22c55e']}
+                                    start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                                    style={styles.callFullBtnGradient}
+                                >
+                                    <MaterialIcons name="phone" size={20} color={Colors.white} />
+                                    <Text style={styles.callFullText}>{t('tracking.call')}</Text>
+                                </LinearGradient>
                             </TouchableOpacity>
                             <TouchableOpacity
                                 style={styles.arriveEarlyBtn}
@@ -514,15 +569,22 @@ const styles = StyleSheet.create({
         gap: 12,
     },
     callFullBtn: {
+        flex: 1,
+        borderRadius: 14,
+        overflow: 'hidden',
+        shadowColor: '#14532d',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 10,
+        elevation: 5,
+    },
+    callFullBtnGradient: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
         gap: 8,
-        backgroundColor: Colors.primary,
-        flex: 1,
         paddingVertical: 15,
-        borderRadius: BorderRadius.full,
-        ...Shadows.button,
+        borderRadius: 14,
     },
     callFullText: {
         color: Colors.white,
@@ -547,15 +609,22 @@ const styles = StyleSheet.create({
         fontWeight: FontWeight.bold,
     },
     finalizeBtn: {
+        flex: 1,
+        borderRadius: 14,
+        overflow: 'hidden',
+        shadowColor: '#22c55e',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.35,
+        shadowRadius: 10,
+        elevation: 5,
+    },
+    finalizeBtnGradient: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
         gap: 10,
-        flex: 1,
-        backgroundColor: '#22c55e',
         paddingVertical: 16,
-        borderRadius: BorderRadius.full,
-        ...Shadows.fab,
+        borderRadius: 14,
     },
     finalizeBtnText: {
         color: Colors.white,

@@ -20,6 +20,30 @@ export default {
         unknown: 'غير معروف',
     },
 
+    // ── Waiting ──
+    waiting: {
+        title: 'في انتظار السائق',
+        subtitle: 'تم إرسال طلبك. يرجى الانتظار...',
+        driver: 'السائق',
+        waitingConfirmation: 'في انتظار التأكيد',
+        cancel: 'إلغاء الطلب',
+        cancelTitle: 'إلغاء الطلب؟',
+        cancelMsg: 'هل أنت متأكد من رغبتك في إلغاء هذا الطلب؟',
+        driverDeclined: 'تم رفض الطلب',
+        driverDeclinedMsg: 'رفض السائق طلبك. يرجى اختيار سائق آخر.',
+    },
+
+    // ── Incoming ──
+    incoming: {
+        title: 'طلب جديد!',
+        subtitle: 'عميل ينتظر تأكيدك',
+        client: 'العميل',
+        distance: 'المسافة',
+        eta: 'وقت الوصول',
+        accept: 'قبول',
+        decline: 'رفض',
+    },
+
     // ── Onboarding ──
     onboarding: {
         title: 'اطلب بسهولة ',
@@ -39,6 +63,7 @@ export default {
         noAccount: 'ليس لديك حساب؟',
         createAccount: 'إنشاء حساب',
         transporterSpace: 'فضاء الناقل',
+        clientSpace: 'فضاء العميل',
         registerTitle: 'إنشاء حساب',
         registerSubtitle: 'انضم إلى جَلْمَا لتوصيل مياه مبسط',
         lastName: 'اللقب',
@@ -186,6 +211,8 @@ export default {
         lastTrip: 'آخر رحلة',
         completedOrders: 'الطلبات المكتملة',
         nextMission: 'المهمة التالية',
+        weeklyRevenue: 'الإيرادات الأسبوعية',
+        days: 'أيام',
         documentsPopupTitle: 'المستندات المطلوبة',
         documentsPopupSubtitle: 'للبدء في تلقي الطلبات ، يرجى تحميل المستندات الرسمية الخاصة بك.',
         carteGrise: 'البطاقة الرمادية للمركبة',
@@ -218,6 +245,8 @@ export default {
         completed: 'مكتمل',
         cancelled: 'ملغي',
         noOrders: 'لم يتم العثور على طلبات',
+        noOrdersSub: 'ستظهر طلباتك هنا بمجرد تقديمها.',
+        noAddress: 'العنوان غير محدد',
         endOfHistory: 'لقد شاهدت كل السجل',
     },
 
@@ -241,27 +270,33 @@ export default {
         transporterRole: 'ناقل • صهريج {{capacity}} لتر',
         noName: 'مستخدم',
     },
-
     // ── Language ──
     lang: {
         title: 'اللغة',
         arabic: 'العربية',
         french: 'الفرنسية',
         english: 'الإنجليزية',
-        changeLangRestart: 'سيتم إعادة تشغيل التطبيق لتطبيق التغيير.',
+        changeLangRestart: 'ستتم إعادة تشغيل التطبيق لتطبيق التغيير.',
     },
 
     // ── Edit Profile ──
     editProfile: {
         title: 'تعديل الملف الشخصي',
-        firstNameLabel: 'الاسم',
+        firstNameLabel: 'الاسم الأول',
         lastNameLabel: 'اللقب',
+        email: 'البريد الإلكتروني',
         emailLabel: 'البريد الإلكتروني',
+        phoneLabel: 'رقم الهاتف',
         dobLabel: 'تاريخ الميلاد (اختياري)',
+        dob: 'تاريخ الميلاد (اختياري)',
         genderLabel: 'الجنس',
+        gender: 'الجنس',
         male: 'ذكر',
         female: 'أنثى',
         saveChanges: 'حفظ التغييرات',
+        updateSuccess: 'تم تحديث ملفك الشخصي بنجاح.',
+        invalidEmail: 'عنوان بريد إلكتروني غير صالح.',
+        requiredFields: 'يرجى ملء الحقول المطلوبة.',
     },
 
     // ── Help & Support ──
@@ -269,12 +304,61 @@ export default {
         title: 'المساعدة والدعم',
         faqTitle: 'الأسئلة الشائعة',
         contactTitle: 'اتصل بنا',
+        contactUs: 'اتصل بنا',
+        supportEmail: 'بريد الدعم',
+        sendEmail: 'إرسال بريد إلكتروني',
+        reportProblem: 'الإبلاغ عن مشكلة',
+        bugDescription: 'وجدت خطأ أو واجهت مشكلة؟ أرسل لنا تقريراً وسنقوم بإصلاحه في أقرب وقت.',
+        reportBug: 'الإبلاغ عن خطأ',
+        dangerZone: 'منطقة خطرة',
+        deleteWarning: 'حذف حسابك لا رجعة فيه. سيتم مسح جميع بياناتك نهائياً.',
+        deleteMyAccount: 'حذف حسابي',
+        deleteAccount: 'حذف الحساب',
+        deleteAccountConfirm: 'هل أنت متأكد من حذف حسابك؟ هذا الإجراء لا رجعة فيه.',
+        delete: 'حذف',
+        accountDeleted: 'تم حذف الحساب',
+        accountDeletedMsg: 'تم حذف حسابك بنجاح.',
     },
 
     // ── About ──
     about: {
         title: 'حول',
         version: 'الإصدار',
+        tagline: 'مياهك، تُوصل إلى بابك',
+        appVersion: 'إصدار التطبيق',
+        lastUpdate: 'آخر تحديث',
+        followUs: 'تابعنا',
+        copyright: '© 2026 Ja-Lma. جميع الحقوق محفوظة.',
+    },
+
+    // ── Documents ──
+    documents: {
+        title: 'مستنداتي',
+        progressTitle: 'مستنداتك',
+        documentsUploaded: 'مستندات تم رفعها',
+        infoBanner: 'مستنداتك ضرورية لتأكيد حسابك ولتتمكن من تلقي الطلبات.',
+        requiredDocs: 'المستندات المطلوبة',
+        notUploaded: 'غير مرفوق',
+        pending: 'في انتظار التحقق',
+        verified: 'تم التحقق',
+        view: 'عرض',
+        replace: 'استبدال',
+        uploadSuccess: 'تم رفع المستند بنجاح!',
+        viewTitle: 'معاينة المستند',
+        viewMessage: 'معاينة المستند ستكون متاحة قريباً.',
+    },
+
+    // ── Notifications ──
+    notifications: {
+        title: 'الإشعارات',
+        emptyTitle: 'لا توجد إشعارات',
+        emptySubtitle: 'أنت على اطلاع بكل جديد! عد لاحقاً.',
+        now: 'الآن',
+        today: 'اليوم',
+        docsReminderTitle: 'مستندات ناقصة',
+        docsReminderMessage: 'يرجى تحميل مستنداتك (البطاقة الرمادية، الرخصة، التصريح) لتفعيل حسابك.',
+        welcomeTitle: 'مرحباً بك في Ja-Lma ! 🎉',
+        welcomeMessage: 'تم إنشاء حساب الناقل الخاص بك بنجاح.',
     },
 
     // ── Rating ──
@@ -322,6 +406,15 @@ export default {
         completed: 'مكتمل',
         cancelled: 'ملغي',
         totalAmount: 'المبلغ الإجمالي',
+        client: 'العميل',
+        deliveryAddress: 'عنوان التوصيل',
+        liters: 'لتر',
+        startDelivery: 'بدء التوصيل',
+        statusAssigned: 'معيّن',
+        statusOnRoute: 'في الطريق',
+        statusCompleted: 'مكتمل',
+        statusCancelled: 'ملغي',
+        statusPending: 'قيد الانتظار',
     },
 
     // ── Revenue ──
@@ -336,4 +429,15 @@ export default {
         noTransactions: 'لا توجد معاملات',
         trips: 'رحلات',
     },
+
+    // ── Tabs ──
+    tabs: {
+        home: 'الرئيسية',
+        dashboard: 'لوحة القيادة',
+        missions: 'المهمات',
+        revenue: 'الإيرادات',
+        profile: 'الملف الشخصي',
+        history: 'السجل',
+    },
 } as const;
+

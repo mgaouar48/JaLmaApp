@@ -1,13 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
-    View, Text, StyleSheet, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, Alert,
+    View, Text, StyleSheet, TouchableOpacity, KeyboardAvoidingView,
+    Platform, Alert, Animated, Dimensions,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { Colors, FontSize, FontWeight, BorderRadius, Shadows } from '../src/constants';
-import { PrimaryButton, AppTextInput } from '../src/components';
+import { AppTextInput } from '../src/components';
 import { useTranslation } from 'react-i18next';
 import { supabase } from '../src/lib/supabase';
+import { ScrollView } from 'react-native';
+
+const { width, height } = Dimensions.get('window');
 
 export default function LoginScreen() {
     const { t } = useTranslation();
@@ -16,35 +21,31 @@ export default function LoginScreen() {
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
 
+    // Entry animations
+    const fadeAnim = useRef(new Animated.Value(0)).current;
+    const slideAnim = useRef(new Animated.Value(40)).current;
+    const logoScale = useRef(new Animated.Value(0.7)).current;
+
+    useEffect(() => {
+        Animated.parallel([
+            Animated.timing(logoScale, { toValue: 1, duration: 700, useNativeDriver: true }),
+            Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
+            Animated.spring(slideAnim, { toValue: 0, tension: 60, friction: 10, useNativeDriver: true }),
+        ]).start();
+    }, []);
+
     const handleLogin = async () => {
         if (!email.trim() || !password.trim()) {
             Alert.alert(t('common.error'), t('auth.fillAllFields'));
             return;
         }
-
         setLoading(true);
-        const { data, error } = await supabase.auth.signInWithPassword({
+        const { error } = await supabase.auth.signInWithPassword({
             email: email.trim(),
             password,
         });
-
-
-        if (error) {
-            setLoading(false);
-            Alert.alert(t('common.error'), error.message);
-            return;
-        }
-
-        // Read role from user metadata (no extra DB call to avoid timing constraints)
-        const role = data.user?.user_metadata?.role;
-
         setLoading(false);
-
-        if (role === 'driver') {
-            router.replace('/(transporter)/home');
-        } else {
-            router.replace('/(client)');
-        }
+        if (error) Alert.alert(t('common.error'), error.message);
     };
 
     return (
@@ -52,45 +53,58 @@ export default function LoginScreen() {
             style={styles.container}
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
-            <ScrollView
-                contentContainerStyle={styles.scrollContent}
-                showsVerticalScrollIndicator={false}
-                keyboardShouldPersistTaps="handled"
+            {/* Hero gradient background */}
+            <LinearGradient
+                colors={['#0A4FAD', '#1565C0', '#1A73E8']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.heroBackground}
             >
-                {/* Header / Brand */}
-                <View style={styles.brandSection}>
-                    <View style={styles.logoCircle}>
-                        <MaterialIcons name="water-drop" size={40} color={Colors.primary} />
-                        <View style={styles.logoGradient} />
-                    </View>
-                    <Text style={styles.title}>{t('auth.welcomeTitle')}</Text>
-                    <Text style={styles.subtitle}>{t('auth.welcomeSubtitle')}</Text>
-                </View>
+                {/* Decorative circles */}
+                <View style={styles.decorCircle1} />
+                <View style={styles.decorCircle2} />
+                <View style={styles.decorCircle3} />
 
-                {/* TEST CREDENTIALS */}
-                <TouchableOpacity 
-                    style={styles.testContainer} 
-                    onPress={() => {
-                        setEmail('client-test@gmail.com');
-                        setPassword('password123');
-                    }}
-                    activeOpacity={0.8}
+                {/* Logo + Brand */}
+                <Animated.View style={[styles.heroContent, { transform: [{ scale: logoScale }], opacity: fadeAnim }]}>
+                    <View style={styles.logoRing}>
+                        <View style={styles.logoInner}>
+                            <MaterialIcons name="water-drop" size={40} color={Colors.white} />
+                        </View>
+                    </View>
+                    <Text style={styles.appName}>Ja-Lma</Text>
+                    <Text style={styles.heroTagline}>{t('auth.welcomeSubtitle')}</Text>
+                </Animated.View>
+            </LinearGradient>
+
+            {/* Card */}
+            <Animated.View style={[
+                styles.card,
+                { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }
+            ]}>
+                <ScrollView
+                    showsVerticalScrollIndicator={false}
+                    keyboardShouldPersistTaps="handled"
+                    contentContainerStyle={styles.cardScroll}
                 >
-                    <MaterialIcons name="info-outline" size={20} color={Colors.accent} />
-                    <View style={{ flex: 1, marginLeft: 8 }}>
-                        <Text style={styles.testTitle}>{t('auth.testClientTitle')}</Text>
-                        <Text style={styles.testText}>{t('auth.testEmail')}: client-test@gmail.com</Text>
-                        <Text style={styles.testText}>{t('auth.testPassword')}: password123</Text>
-                    </View>
-                </TouchableOpacity>
+                    <Text style={styles.cardTitle}>{t('auth.welcomeTitle')}</Text>
+                    <Text style={styles.cardSubtitle}>{t('auth.welcomeSubtitle')}</Text>
 
-                {/* Form */}
-                <View style={styles.form}>
+                    {/* Quick-fill test button */}
+                    <TouchableOpacity
+                        style={styles.testChip}
+                        onPress={() => { setEmail('jkdn488@gmail.com'); setPassword('test123'); }}
+                        activeOpacity={0.8}
+                    >
+                        <MaterialIcons name="bolt" size={15} color="#f59e0b" />
+                        <Text style={styles.testChipText}>{t('auth.testClientTitle')} — tap to fill</Text>
+                    </TouchableOpacity>
+
                     {/* Email */}
                     <View style={styles.fieldGroup}>
                         <Text style={styles.label}>{t('auth.emailOrPhone')}</Text>
                         <AppTextInput
-                            icon="person-outline"
+                            icon="email"
                             placeholder={t('auth.emailPlaceholder')}
                             keyboardType="email-address"
                             autoCapitalize="none"
@@ -118,77 +132,228 @@ export default function LoginScreen() {
                         />
                     </View>
 
-                    <View style={{ height: 16 }} />
-
-                    {/* Submit */}
-                    <PrimaryButton
-                        title={loading ? t('common.loading') : t('auth.login')}
-                        icon="arrow-forward"
+                    {/* Login button */}
+                    <TouchableOpacity
+                        style={[styles.loginBtn, loading && { opacity: 0.7 }]}
                         onPress={handleLogin}
                         disabled={loading}
-                    />
-                </View>
-
-                {/* Footer */}
-                <View style={styles.footer}>
-                    <Text style={styles.footerText}>{t('auth.noAccount')}{' '}</Text>
-                    <TouchableOpacity onPress={() => router.push('/register')}>
-                        <Text style={styles.footerLink}>{t('auth.createAccount')}</Text>
+                        activeOpacity={0.85}
+                    >
+                        <LinearGradient
+                            colors={['#1A73E8', '#0A4FAD']}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 0 }}
+                            style={styles.loginBtnGradient}
+                        >
+                            {loading
+                                ? <Text style={styles.loginBtnText}>{t('common.loading')}</Text>
+                                : <>
+                                    <Text style={styles.loginBtnText}>{t('auth.login')}</Text>
+                                    <MaterialIcons name="arrow-forward" size={20} color={Colors.white} />
+                                </>
+                            }
+                        </LinearGradient>
                     </TouchableOpacity>
-                </View>
 
-                {/* Transporter link */}
-                <TouchableOpacity
-                    style={styles.transporterLink}
-                    onPress={() => router.push('/transporter-login')}
-                    activeOpacity={0.8}
-                >
-                    <MaterialIcons name="local-shipping" size={24} color={Colors.primary} />
-                    <Text style={styles.transporterLinkText}>{t('auth.transporterSpace')}</Text>
-                </TouchableOpacity>
-            </ScrollView>
+                    {/* Register link */}
+                    <View style={styles.registerRow}>
+                        <Text style={styles.registerText}>{t('auth.noAccount')} </Text>
+                        <TouchableOpacity onPress={() => router.push('/register')}>
+                            <Text style={styles.registerLink}>{t('auth.createAccount')}</Text>
+                        </TouchableOpacity>
+                    </View>
+
+                    {/* Separator */}
+                    <View style={styles.separator}>
+                        <View style={styles.separatorLine} />
+                        <Text style={styles.separatorText}>ou</Text>
+                        <View style={styles.separatorLine} />
+                    </View>
+
+                    {/* Transporter CTA — gradient banner */}
+                    <TouchableOpacity
+                        onPress={() => router.push('/transporter-login')}
+                        activeOpacity={0.88}
+                        style={styles.transporterCard}
+                    >
+                        <LinearGradient
+                            colors={['#0f172a', '#1e293b']}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 0 }}
+                            style={styles.transporterCardGradient}
+                        >
+                            <View style={styles.transporterIconCircle}>
+                                <MaterialIcons name="local-shipping" size={24} color="#22c55e" />
+                            </View>
+                            <View style={{ flex: 1 }}>
+                                <Text style={styles.transporterCardTitle}>{t('auth.transporterSpace')}</Text>
+                                <Text style={styles.transporterCardSub}>Ja-Lma Pro — accès livreur</Text>
+                            </View>
+                            <View style={styles.transporterArrow}>
+                                <MaterialIcons name="arrow-forward" size={18} color="#22c55e" />
+                            </View>
+                        </LinearGradient>
+                    </TouchableOpacity>
+                </ScrollView>
+            </Animated.View>
         </KeyboardAvoidingView>
     );
 }
 
+const CARD_TOP = height * 0.33;
+
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: Colors.white },
-    scrollContent: { flexGrow: 1, paddingHorizontal: 32, paddingTop: 60, paddingBottom: 40 },
-    brandSection: { alignItems: 'center', marginBottom: 32 },
-    logoCircle: {
-        width: 80, height: 80, borderRadius: 40,
-        backgroundColor: `${Colors.primary}15`,
+    container: { flex: 1, backgroundColor: '#0A4FAD' },
+
+    // Hero
+    heroBackground: {
+        position: 'absolute', top: 0, left: 0, right: 0,
+        height: CARD_TOP + 40,
+        overflow: 'hidden',
+    },
+    decorCircle1: {
+        position: 'absolute', top: -60, right: -60,
+        width: 200, height: 200, borderRadius: 100,
+        backgroundColor: 'rgba(255,255,255,0.08)',
+    },
+    decorCircle2: {
+        position: 'absolute', top: 40, left: -80,
+        width: 180, height: 180, borderRadius: 90,
+        backgroundColor: 'rgba(255,255,255,0.05)',
+    },
+    decorCircle3: {
+        position: 'absolute', bottom: -20, right: 40,
+        width: 100, height: 100, borderRadius: 50,
+        backgroundColor: 'rgba(255,255,255,0.06)',
+    },
+    heroContent: {
+        flex: 1, alignItems: 'center', justifyContent: 'center',
+        paddingTop: Platform.OS === 'ios' ? 56 : 40,
+    },
+    logoRing: {
+        width: 88, height: 88, borderRadius: 44,
+        backgroundColor: 'rgba(255,255,255,0.15)',
         alignItems: 'center', justifyContent: 'center',
-        marginBottom: 24, overflow: 'hidden',
+        marginBottom: 14,
     },
-    logoGradient: { ...StyleSheet.absoluteFillObject, backgroundColor: `${Colors.primary}08` },
-    title: { fontSize: FontSize['2xl'], fontWeight: FontWeight.bold, color: Colors.slate900, marginBottom: 8 },
-    subtitle: { fontSize: FontSize.sm, color: Colors.slate500 },
-    testContainer: {
-        backgroundColor: `${Colors.accent}15`,
-        padding: 16,
-        borderRadius: BorderRadius.lg,
-        borderWidth: 1,
-        borderColor: `${Colors.accent}50`,
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: 32,
+    logoInner: {
+        width: 68, height: 68, borderRadius: 34,
+        backgroundColor: 'rgba(255,255,255,0.25)',
+        alignItems: 'center', justifyContent: 'center',
     },
-    testTitle: { fontSize: FontSize.sm, fontWeight: FontWeight.bold, color: Colors.slate800, marginBottom: 4 },
-    testText: { fontSize: FontSize.xs, color: Colors.slate600 },
-    form: { gap: 24 },
-    fieldGroup: { gap: 8 },
-    label: { fontSize: FontSize.sm, fontWeight: FontWeight.medium, color: Colors.slate700, marginLeft: 4 },
-    labelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-    forgotLink: { fontSize: FontSize.xs, fontWeight: FontWeight.semibold, color: Colors.primary },
-    footer: { flexDirection: 'row', justifyContent: 'center', marginTop: 32, paddingVertical: 24, borderTopWidth: 1, borderTopColor: Colors.slate100 },
-    footerText: { fontSize: FontSize.sm, color: Colors.slate600 },
-    footerLink: { fontSize: FontSize.sm, fontWeight: FontWeight.bold, color: Colors.primary },
-    transporterLink: {
-        flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12,
-        paddingVertical: 16, paddingHorizontal: 24, marginHorizontal: 24, marginBottom: 24,
-        backgroundColor: Colors.white, borderRadius: BorderRadius.xl,
-        borderWidth: 2, borderColor: Colors.primary, ...Shadows.soft,
+    appName: {
+        fontSize: 32, fontWeight: '800' as any,
+        color: Colors.white, letterSpacing: 1,
     },
-    transporterLinkText: { fontSize: FontSize.md, fontWeight: FontWeight.bold, color: Colors.primary },
+    heroTagline: {
+        fontSize: FontSize.sm, color: 'rgba(255,255,255,0.8)',
+        fontWeight: FontWeight.medium, marginTop: 4,
+    },
+
+    // Card
+    card: {
+        position: 'absolute', top: CARD_TOP,
+        left: 0, right: 0, bottom: 0,
+        backgroundColor: Colors.white,
+        borderTopLeftRadius: 32, borderTopRightRadius: 32,
+        ...Shadows.float,
+    },
+    cardScroll: {
+        paddingHorizontal: 28, paddingTop: 32, paddingBottom: 40, gap: 16,
+    },
+    cardTitle: {
+        fontSize: FontSize['2xl'], fontWeight: FontWeight.extrabold,
+        color: Colors.slate900,
+    },
+    cardSubtitle: {
+        fontSize: FontSize.sm, color: Colors.slate500,
+        marginTop: -8,
+    },
+
+    // Test chip
+    testChip: {
+        flexDirection: 'row', alignItems: 'center', gap: 6,
+        alignSelf: 'flex-start',
+        backgroundColor: '#fef3c7',
+        paddingHorizontal: 12, paddingVertical: 6,
+        borderRadius: BorderRadius.full,
+        borderWidth: 1, borderColor: '#fbbf24',
+    },
+    testChipText: {
+        fontSize: FontSize.xs, fontWeight: FontWeight.semibold, color: '#92400e',
+    },
+
+    // Form
+    fieldGroup: { gap: 6 },
+    label: {
+        fontSize: FontSize.sm, fontWeight: FontWeight.semibold, color: Colors.slate700,
+    },
+    labelRow: {
+        flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    },
+    forgotLink: {
+        fontSize: FontSize.xs, fontWeight: FontWeight.bold, color: Colors.primary,
+    },
+
+    // Login button
+    loginBtn: {
+        borderRadius: BorderRadius.full, overflow: 'hidden',
+        marginTop: 4,
+        shadowColor: Colors.primary,
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.35, shadowRadius: 12, elevation: 8,
+    },
+    loginBtnGradient: {
+        flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+        paddingVertical: 17, gap: 8,
+    },
+    loginBtnText: {
+        fontSize: FontSize.base, fontWeight: FontWeight.bold, color: Colors.white,
+    },
+
+    // Register
+    registerRow: {
+        flexDirection: 'row', justifyContent: 'center', alignItems: 'center',
+    },
+    registerText: { fontSize: FontSize.sm, color: Colors.slate500 },
+    registerLink: {
+        fontSize: FontSize.sm, fontWeight: FontWeight.bold, color: Colors.primary,
+    },
+
+    // Separator
+    separator: {
+        flexDirection: 'row', alignItems: 'center', gap: 10,
+    },
+    separatorLine: { flex: 1, height: 1, backgroundColor: Colors.slate200 },
+    separatorText: { fontSize: FontSize.xs, color: Colors.slate400 },
+
+    // Transporter card CTA
+    transporterCard: {
+        borderRadius: BorderRadius.xl,
+        overflow: 'hidden',
+        shadowColor: '#0f172a',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.25, shadowRadius: 12, elevation: 6,
+    },
+    transporterCardGradient: {
+        flexDirection: 'row', alignItems: 'center',
+        paddingVertical: 16, paddingHorizontal: 18, gap: 14,
+    },
+    transporterIconCircle: {
+        width: 46, height: 46, borderRadius: 12,
+        backgroundColor: 'rgba(34,197,94,0.15)',
+        alignItems: 'center', justifyContent: 'center',
+        borderWidth: 1, borderColor: 'rgba(34,197,94,0.3)',
+    },
+    transporterCardTitle: {
+        fontSize: FontSize.base, fontWeight: FontWeight.bold, color: Colors.white,
+    },
+    transporterCardSub: {
+        fontSize: FontSize.xs, color: 'rgba(255,255,255,0.5)', marginTop: 2,
+    },
+    transporterArrow: {
+        width: 32, height: 32, borderRadius: 8,
+        backgroundColor: 'rgba(34,197,94,0.15)',
+        alignItems: 'center', justifyContent: 'center',
+    },
 });

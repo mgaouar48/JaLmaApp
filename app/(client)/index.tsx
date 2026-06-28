@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { Colors, FontSize, FontWeight, Shadows, BorderRadius } from '../../src/constants';
 import { TransporterCard } from '../../src/components';
@@ -124,12 +125,21 @@ export default function ClientDashboard() {
     // Location + initial fetch
     useEffect(() => {
         (async () => {
-            const { status } = await Location.requestForegroundPermissionsAsync();
-            if (status !== 'granted') return;
-            setLocationGranted(true);
-            const loc = await Location.getCurrentPositionAsync({});
-            setLocation(loc);
-            fetchDrivers(loc.coords.latitude, loc.coords.longitude);
+            try {
+                const { status } = await Location.requestForegroundPermissionsAsync();
+                if (status !== 'granted') return;
+
+                const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+                setLocation(loc);
+                fetchDrivers(loc.coords.latitude, loc.coords.longitude);
+
+                // Allow UI to render before enabling map's location tracking
+                setTimeout(() => setLocationGranted(true), 500);
+            } catch (err) {
+                console.log('Location error:', err);
+                // Fallback to avoid empty state
+                setTimeout(() => setLocationGranted(true), 500);
+            }
         })();
     }, []);
 
@@ -283,9 +293,13 @@ export default function ClientDashboard() {
                 </MapView>
 
                 {/* Top Header overlay */}
-                <View style={[styles.header, { paddingTop: Platform.OS === 'ios' ? insets.top + 8 : 40 }]}>
+                <LinearGradient
+                    colors={['rgba(10,79,173,0.92)', 'rgba(26,115,232,0.85)']}
+                    start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                    style={[styles.header, { paddingTop: Platform.OS === 'ios' ? insets.top + 8 : 40 }]}
+                >
                     <View>
-                        <Text style={styles.headerDate}>Tlemcen</Text>
+                        <Text style={styles.headerDate}>📍 Tlemcen</Text>
                         <Text style={styles.headerName}>{t('client.greeting', { name: profile?.first_name || '' })}</Text>
                     </View>
                     <TouchableOpacity
@@ -296,7 +310,7 @@ export default function ClientDashboard() {
                             <MaterialIcons name="person" size={22} color={Colors.white} />
                         </View>
                     </TouchableOpacity>
-                </View>
+                </LinearGradient>
 
                 {/* Map controls */}
                 <View style={styles.mapControls}>
@@ -505,32 +519,32 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         alignItems: 'center',
         paddingHorizontal: 20,
-        paddingBottom: 12,
-        backgroundColor: 'rgba(255,255,255,0.92)',
+        paddingBottom: 14,
     },
     headerDate: {
-        fontSize: FontSize.sm,
+        fontSize: FontSize.xs,
         fontWeight: FontWeight.medium,
-        color: `${Colors.primary}99`,
+        color: 'rgba(255,255,255,0.8)',
+        letterSpacing: 0.3,
     },
     headerName: {
         fontSize: FontSize.xl,
-        fontWeight: FontWeight.bold,
-        color: Colors.primary,
+        fontWeight: '800' as any,
+        color: Colors.white,
+        marginTop: 2,
     },
     avatarWrapper: {
         position: 'relative',
     },
     avatar: {
-        width: 42,
-        height: 42,
-        borderRadius: 21,
-        backgroundColor: Colors.primary,
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: 'rgba(255,255,255,0.2)',
         alignItems: 'center',
         justifyContent: 'center',
         borderWidth: 2,
-        borderColor: Colors.white,
-        ...Shadows.floatSm,
+        borderColor: 'rgba(255,255,255,0.4)',
     },
 
     // ── Map controls ──

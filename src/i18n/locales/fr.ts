@@ -18,6 +18,30 @@ export default {
         da: 'DA',
         liters: 'L',
         unknown: 'Inconnu',
+        yes: 'Oui',
+        no: 'Non',
+    },
+
+    waiting: {
+        title: 'En attente du chauffeur',
+        subtitle: 'Votre demande a été envoyée. Patientez...',
+        driver: 'Chauffeur',
+        waitingConfirmation: 'En attente de confirmation',
+        cancel: 'Annuler la commande',
+        cancelTitle: 'Annuler la commande ?',
+        cancelMsg: 'Êtes-vous sûr de vouloir annuler cette commande ?',
+        driverDeclined: 'Commande refusée',
+        driverDeclinedMsg: 'Le chauffeur a refusé votre demande. Veuillez en choisir un autre.',
+    },
+
+    incoming: {
+        title: 'Nouvelle commande !',
+        subtitle: 'Un client attend votre confirmation',
+        client: 'Client',
+        distance: 'Distance',
+        eta: 'Arrivée',
+        accept: 'Accepter',
+        decline: 'Refuser',
     },
 
     // ── Onboarding ──
@@ -39,6 +63,7 @@ export default {
         noAccount: 'Pas encore de compte ?',
         createAccount: 'Créer un compte',
         transporterSpace: 'Espace Transporteur',
+        clientSpace: 'Espace Client',
         registerTitle: 'Créer un compte',
         registerSubtitle: "Rejoignez Ja-Lma pour une livraison d'eau simplifiée",
         lastName: 'NOM',
@@ -186,6 +211,8 @@ export default {
         lastTrip: 'Dernier trajet',
         completedOrders: 'Commandes terminées',
         nextMission: 'Prochaine mission',
+        weeklyRevenue: 'Revenus hebdomadaires',
+        days: 'jours',
         // Documents popup
         documentsPopupTitle: 'Documents requis',
         documentsPopupSubtitle: 'Pour commencer à recevoir des commandes, veuillez télécharger vos documents officiels.',
@@ -240,6 +267,8 @@ export default {
         completed: 'Terminé',
         cancelled: 'Annulé',
         noOrders: 'Aucune commande trouvée',
+        noOrdersSub: 'Vos commandes apparaîtront ici une fois passées.',
+        noAddress: 'Adresse non renseignée',
         endOfHistory: "Vous avez vu tout l'historique",
     },
 
@@ -279,12 +308,19 @@ export default {
         title: 'Modifier le profil',
         firstNameLabel: 'Prénom',
         lastNameLabel: 'Nom',
+        email: 'Email',
         emailLabel: 'Email',
+        phoneLabel: 'Numéro de téléphone',
         dobLabel: 'Date de naissance (optionnel)',
+        dob: 'Date de naissance (optionnel)',
         genderLabel: 'Genre',
+        gender: 'Genre',
         male: 'Homme',
         female: 'Femme',
         saveChanges: 'Enregistrer les modifications',
+        updateSuccess: 'Votre profil a été mis à jour avec succès.',
+        invalidEmail: 'Adresse email invalide.',
+        requiredFields: 'Veuillez remplir les champs obligatoires.',
     },
 
     // ── Help & Support ──
@@ -292,12 +328,31 @@ export default {
         title: 'Aide & Support',
         faqTitle: 'Questions fréquentes',
         contactTitle: 'Contactez-nous',
+        contactUs: 'Nous contacter',
+        supportEmail: 'Email de support',
+        sendEmail: 'Envoyer un email',
+        reportProblem: 'Signaler un problème',
+        bugDescription: 'Vous avez trouvé un bug ou rencontré un problème ? Envoyez-nous un rapport et nous le corrigerons dès que possible.',
+        reportBug: 'Signaler un bug',
+        dangerZone: 'Zone dangereuse',
+        deleteWarning: 'La suppression de votre compte est irréversible. Toutes vos données seront définitivement effacées.',
+        deleteMyAccount: 'Supprimer mon compte',
+        deleteAccount: 'Supprimer le compte',
+        deleteAccountConfirm: 'Êtes-vous sûr de vouloir supprimer votre compte ? Cette action est irréversible.',
+        delete: 'Supprimer',
+        accountDeleted: 'Compte supprimé',
+        accountDeletedMsg: 'Votre compte a été supprimé avec succès.',
     },
 
     // ── About ──
     about: {
         title: 'À propos',
         version: 'Version',
+        tagline: 'Votre eau, livrée à domicile',
+        appVersion: 'Version de l\'application',
+        lastUpdate: 'Dernière mise à jour',
+        followUs: 'Suivez-nous',
+        copyright: '© 2026 Ja-Lma. Tous droits réservés.',
     },
 
     // ── Documents ──
@@ -370,4 +425,43 @@ export default {
         noTransactions: 'Aucune transaction',
         trips: 'courses',
     },
+
+    // ── Tabs ──
+    tabs: {
+        home: 'Accueil',
+        dashboard: 'Tableau de bord',
+        missions: 'Missions',
+        revenue: 'Revenus',
+        profile: 'Profil',
+        history: 'Historique',
+    },
+
+    // ── Missions ──
+    missions: {
+        title: 'Mes missions',
+        newMission: 'Nouvelle mission',
+        all: 'Toutes',
+        pending: 'En attente',
+        active: 'Active',
+        done: 'Terminée',
+        noMissions: 'Aucune mission',
+        filter_all: 'Toutes',
+        filter_inProgress: 'En cours',
+        filter_completed: 'Terminées',
+        filter_cancelled: 'Annulées',
+        inProgress: 'En cours',
+        completed: 'Terminée',
+        cancelled: 'Annulée',
+        totalAmount: 'Montant total',
+        client: 'Client',
+        deliveryAddress: 'Adresse de livraison',
+        liters: 'L',
+        startDelivery: 'Démarrer la livraison',
+        statusAssigned: 'Assignée',
+        statusOnRoute: 'En route',
+        statusCompleted: 'Terminée',
+        statusCancelled: 'Annulée',
+        statusPending: 'En attente',
+    },
 } as const;
+

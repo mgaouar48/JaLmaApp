@@ -3,6 +3,7 @@ import {
     View, Text, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { Colors, FontSize, FontWeight, BorderRadius, Shadows } from '../src/constants';
 import { PrimaryButton, AppTextInput } from '../src/components';
@@ -25,13 +26,18 @@ export default function TransporterForgotPasswordScreen() {
             style={styles.container}
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
-            <View style={styles.header}>
+            <LinearGradient colors={['#0f172a', '#1e293b']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.header}>
+                <View style={styles.glowCircle} />
                 <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-                    <MaterialIcons name="arrow-back-ios-new" size={20} color={Colors.textDark} />
+                    <MaterialIcons name="arrow-back" size={22} color="rgba(255,255,255,0.8)" />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>{t('auth.forgotPasswordTitle')}</Text>
-                <View style={{ width: 40 }} />
-            </View>
+                <View style={styles.headerContent}>
+                    <View style={styles.headerIconRing}>
+                        <MaterialIcons name="lock-reset" size={26} color="#22c55e" />
+                    </View>
+                    <Text style={styles.headerTitle}>{t('auth.forgotPasswordTitle')}</Text>
+                </View>
+            </LinearGradient>
 
             <ScrollView contentContainerStyle={styles.content}>
                 <View style={styles.iconContainer}>
@@ -75,32 +81,13 @@ export default function TransporterForgotPasswordScreen() {
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: Colors.backgroundLight,
-    },
-    header: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 24,
-        paddingTop: Platform.OS === 'ios' ? 60 : 48,
-        paddingBottom: 16,
-    },
-    backButton: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        backgroundColor: Colors.white,
-        alignItems: 'center',
-        justifyContent: 'center',
-        ...Shadows.floatSm,
-    },
-    headerTitle: {
-        fontSize: FontSize.lg,
-        fontWeight: FontWeight.bold,
-        color: Colors.textDark,
-    },
+    container: { flex: 1, backgroundColor: '#f8fafc' },
+    header: { paddingTop: Platform.OS === 'ios' ? 52 : 40, paddingBottom: 24, overflow: 'hidden' },
+    glowCircle: { position: 'absolute', top: -30, left: '50%', marginLeft: -80, width: 160, height: 160, borderRadius: 80, backgroundColor: 'rgba(34,197,94,0.08)' },
+    backButton: { position: 'absolute', top: Platform.OS === 'ios' ? 52 : 40, left: 16, width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.1)', alignItems: 'center', justifyContent: 'center', zIndex: 10 },
+    headerContent: { alignItems: 'center', paddingTop: 8, gap: 6 },
+    headerIconRing: { width: 52, height: 52, borderRadius: 26, backgroundColor: 'rgba(34,197,94,0.15)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(34,197,94,0.25)' },
+    headerTitle: { fontSize: FontSize.xl, fontWeight: '800' as any, color: Colors.white },
     content: {
         paddingHorizontal: 32,
         paddingTop: 40,
