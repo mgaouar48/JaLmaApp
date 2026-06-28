@@ -1,272 +1,214 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
-    View, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, TouchableOpacity,
+    View, Text, StyleSheet, ScrollView, KeyboardAvoidingView,
+    Platform, TouchableOpacity, Alert, Animated, Dimensions,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { Colors, FontSize, FontWeight, BorderRadius, Shadows } from '../src/constants';
-import { PrimaryButton, AppTextInput } from '../src/components';
+import { AppTextInput } from '../src/components';
+import { useTranslation } from 'react-i18next';
+import { supabase } from '../src/lib/supabase';
+
+const { height } = Dimensions.get('window');
+const CARD_TOP = height * 0.30;
+
+const CAPACITIES = ['2000 L', '3000 L', '5000 L', '10000 L'] as const;
+type Capacity = typeof CAPACITIES[number];
 
 export default function TransporterRegisterScreen() {
+    const { t } = useTranslation();
+    const [capacity, setCapacity] = useState<Capacity | null>(null);
+    const [firstName, setFirstName] = useState('');
+    const [lastName, setLastName] = useState('');
+    const [phone, setPhone] = useState('');
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
+    const [loading, setLoading] = useState(false);
+
+    const fadeAnim = useRef(new Animated.Value(0)).current;
+    const slideAnim = useRef(new Animated.Value(50)).current;
+    const logoScale = useRef(new Animated.Value(0.6)).current;
+
+    useEffect(() => {
+        Animated.parallel([
+            Animated.spring(logoScale, { toValue: 1, tension: 55, friction: 8, useNativeDriver: true }),
+            Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
+            Animated.spring(slideAnim, { toValue: 0, tension: 60, friction: 10, useNativeDriver: true }),
+        ]).start();
+    }, []);
+
+    const handleRegister = async () => {
+        if (!firstName.trim() || !lastName.trim() || !phone.trim() || !email.trim() || !password.trim() || !capacity) {
+            Alert.alert(t('common.error'), t('auth.fillAllFields'));
+            return;
+        }
+        if (password.length < 6) {
+            Alert.alert(t('common.error'), t('auth.passwordTooShort'));
+            return;
+        }
+        setLoading(true);
+        const { data, error } = await supabase.auth.signUp({
+            email: email.trim(), password,
+            options: { data: { role: 'driver', first_name: firstName.trim(), last_name: lastName.trim(), phone: phone.trim() } },
+        });
+        if (error) { setLoading(false); Alert.alert(t('common.error'), error.message); return; }
+
+        if (data.user) {
+            const capacityLiters = parseInt(capacity.replace(' L', ''));
+            let price = 1200;
+            if (capacityLiters === 3000) price = 1500;
+            if (capacityLiters === 5000) price = 2500;
+            if (capacityLiters === 10000) price = 4000;
+            await supabase.from('drivers').insert({ id: data.user.id, tank_capacity_liters: capacityLiters, price_per_delivery: price, is_online: false, is_available: true });
+        }
+        setLoading(false);
+    };
+
     return (
-        <KeyboardAvoidingView
-            style={styles.container}
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        >
-            {/* Decorative blobs */}
-            <View style={styles.blob1} />
-            <View style={styles.blob2} />
+        <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+            {/* Dark hero — matches transporter login */}
+            <LinearGradient colors={['#0f172a', '#1e293b', '#0f172a']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.hero}>
+                <View style={styles.glowCircle} />
+                <View style={styles.decorCircle1} />
 
-            {/* Top nav */}
-            <View style={styles.nav}>
-                <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-                    <MaterialIcons name="arrow-back-ios-new" size={18} color={Colors.textDark} />
+                <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+                    <MaterialIcons name="arrow-back" size={22} color="rgba(255,255,255,0.8)" />
                 </TouchableOpacity>
-                <Text style={styles.navTitle}>INSCRIPTION</Text>
-                <View style={{ width: 40 }} />
-            </View>
 
-            <ScrollView
-                contentContainerStyle={styles.scrollContent}
-                showsVerticalScrollIndicator={false}
-                keyboardShouldPersistTaps="handled"
-            >
-                {/* Logo */}
-                <View style={styles.logoSection}>
-                    <View style={styles.logoContainer}>
-                        <View style={styles.logoBg} />
-                        <MaterialIcons name="water-drop" size={72} color={Colors.primary} />
-                        <View style={styles.truckIconOverlay}>
-                            <MaterialIcons name="local-shipping" size={28} color={Colors.white} />
+                <Animated.View style={[styles.heroContent, { transform: [{ scale: logoScale }], opacity: fadeAnim }]}>
+                    <View style={styles.logoRingOuter}>
+                        <View style={styles.logoRingInner}>
+                            <LinearGradient colors={['#22c55e', '#16a34a']} style={styles.logoGradient}>
+                                <MaterialIcons name="local-shipping" size={32} color={Colors.white} />
+                            </LinearGradient>
                         </View>
                     </View>
-                    <Text style={styles.title}>Devenir Transporteur</Text>
-                    <Text style={styles.subtitle}>
-                        Rejoignez le réseau Ja-Lma et gérez vos livraisons d'eau en toute simplicité.
+                    <Text style={styles.appName}>Ja-Lma Pro</Text>
+                    <View style={styles.roleBadge}>
+                        <MaterialIcons name="verified" size={12} color="#22c55e" />
+                        <Text style={styles.roleText}>{t('auth.becomeTransporter')}</Text>
+                    </View>
+                </Animated.View>
+            </LinearGradient>
+
+            {/* Sliding white card */}
+            <Animated.View style={[styles.card, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+                <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.cardScroll}>
+                    <Text style={styles.cardTitle}>{t('auth.registerTitle')}</Text>
+                    <Text style={styles.cardSubtitle}>{t('auth.registerSubtitle')}</Text>
+
+                    {/* Name row */}
+                    <View style={styles.nameRow}>
+                        <View style={[styles.fieldGroup, { flex: 1 }]}>
+                            <Text style={styles.label}>{t('auth.lastName')}</Text>
+                            <AppTextInput placeholder={t('auth.lastNamePlaceholder')} value={lastName} onChangeText={setLastName} />
+                        </View>
+                        <View style={[styles.fieldGroup, { flex: 1 }]}>
+                            <Text style={styles.label}>{t('auth.firstName')}</Text>
+                            <AppTextInput placeholder={t('auth.firstNamePlaceholder')} value={firstName} onChangeText={setFirstName} />
+                        </View>
+                    </View>
+
+                    <View style={styles.fieldGroup}>
+                        <Text style={styles.label}>{t('auth.phoneNumber')}</Text>
+                        <AppTextInput icon="phone" placeholder="0555 123 456" keyboardType="phone-pad" value={phone} onChangeText={setPhone} />
+                    </View>
+                    <View style={styles.fieldGroup}>
+                        <Text style={styles.label}>{t('auth.email')}</Text>
+                        <AppTextInput icon="email" placeholder="email@example.com" keyboardType="email-address" autoCapitalize="none" value={email} onChangeText={setEmail} />
+                    </View>
+                    <View style={styles.fieldGroup}>
+                        <Text style={styles.label}>{t('auth.password')}</Text>
+                        <AppTextInput icon="lock-outline" placeholder="••••••••" secureTextEntry={!showPassword} rightIcon={showPassword ? 'visibility' : 'visibility-off'} onRightIconPress={() => setShowPassword(!showPassword)} value={password} onChangeText={setPassword} />
+                    </View>
+
+                    {/* Capacity selector */}
+                    <View style={styles.fieldGroup}>
+                        <Text style={styles.label}>Capacité de la citerne</Text>
+                        <View style={styles.capacityGrid}>
+                            {CAPACITIES.map((opt) => {
+                                const selected = capacity === opt;
+                                return (
+                                    <TouchableOpacity
+                                        key={opt}
+                                        style={[styles.capacityOption, selected && styles.capacityOptionSelected]}
+                                        onPress={() => setCapacity(opt)}
+                                        activeOpacity={0.8}
+                                    >
+                                        {selected && (
+                                            <LinearGradient colors={['#22c55e', '#16a34a']} style={StyleSheet.absoluteFill} />
+                                        )}
+                                        <MaterialIcons name="local-shipping" size={16} color={selected ? Colors.white : Colors.slate400} />
+                                        <Text style={[styles.capacityText, selected && styles.capacityTextSelected]}>{opt}</Text>
+                                        {selected && <MaterialIcons name="check-circle" size={14} color={Colors.white} />}
+                                    </TouchableOpacity>
+                                );
+                            })}
+                        </View>
+                    </View>
+
+                    {/* Terms */}
+                    <Text style={styles.terms}>
+                        {t('auth.termsPrefix')}
+                        <Text style={styles.termsLink}>{t('auth.termsOfUse')}</Text>
+                        {t('auth.termsAnd')}
+                        <Text style={styles.termsLink}>{t('auth.privacyPolicy')}</Text>.
                     </Text>
-                </View>
 
-                {/* Form */}
-                <View style={styles.form}>
-                    <View style={styles.fieldGroup}>
-                        <Text style={styles.label}>NOM</Text>
-                        <AppTextInput icon="person" placeholder="Ex: Dupont" />
-                    </View>
-                    <View style={styles.fieldGroup}>
-                        <Text style={styles.label}>PRÉNOM</Text>
-                        <AppTextInput icon="badge" placeholder="Ex: Marc" />
-                    </View>
-                    <View style={styles.fieldGroup}>
-                        <Text style={styles.label}>NUMÉRO DE TÉLÉPHONE</Text>
-                        <View style={styles.phoneRow}>
-                            <View style={styles.countryCode}>
-                                <Text style={styles.countryCodeText}>+213</Text>
-                            </View>
-                            <AppTextInput
-                                icon="phone-iphone"
-                                placeholder="6 00 00 00 00"
-                                keyboardType="phone-pad"
-                                containerStyle={{ flex: 1 }}
-                            />
-                        </View>
-                    </View>
-                    <View style={styles.fieldGroup}>
-                        <Text style={styles.label}>TYPE DE VÉHICULE</Text>
-                        <View style={styles.selectBox}>
-                            <MaterialIcons name="local-shipping" size={18} color={Colors.slate400} />
-                            <Text style={styles.selectText}>Sélectionnez la capacité</Text>
-                            <MaterialIcons name="expand-more" size={20} color={Colors.slate400} />
-                        </View>
-                    </View>
+                    {/* Register button — green */}
+                    <TouchableOpacity style={[styles.btn, loading && { opacity: 0.7 }]} onPress={handleRegister} disabled={loading} activeOpacity={0.85}>
+                        <LinearGradient colors={['#22c55e', '#16a34a']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.btnGradient}>
+                            <Text style={styles.btnText}>{loading ? t('common.loading') : t('auth.register')}</Text>
+                            {!loading && <MaterialIcons name="arrow-forward" size={20} color={Colors.white} />}
+                        </LinearGradient>
+                    </TouchableOpacity>
 
-                    {/* Terms checkbox */}
-                    <View style={styles.termsRow}>
-                        <View style={styles.checkbox}>
-                            <MaterialIcons name="check-box-outline-blank" size={20} color={Colors.slate300} />
-                        </View>
-                        <Text style={styles.termsText}>
-                            En m'inscrivant, j'accepte les{' '}
-                            <Text style={styles.termsLink}>Conditions Générales</Text> et la{' '}
-                            <Text style={styles.termsLink}>Politique de Confidentialité</Text>.
-                        </Text>
+                    <View style={styles.loginRow}>
+                        <Text style={styles.loginText}>{t('auth.hasAccount')} </Text>
+                        <TouchableOpacity onPress={() => router.back()}>
+                            <Text style={styles.loginLink}>{t('auth.login')}</Text>
+                        </TouchableOpacity>
                     </View>
-                </View>
-            </ScrollView>
-
-            {/* Bottom CTA */}
-            <View style={styles.bottomCta}>
-                <PrimaryButton
-                    title="Suivant"
-                    icon="arrow-forward"
-                    onPress={() => router.replace('/(transporter)')}
-                />
-            </View>
+                </ScrollView>
+            </Animated.View>
         </KeyboardAvoidingView>
     );
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: Colors.backgroundLight,
-    },
-    blob1: {
-        position: 'absolute',
-        top: -96,
-        right: -96,
-        width: 256,
-        height: 256,
-        borderRadius: 128,
-        backgroundColor: `${Colors.primary}08`,
-    },
-    blob2: {
-        position: 'absolute',
-        top: '50%',
-        left: -128,
-        width: 256,
-        height: 256,
-        borderRadius: 128,
-        backgroundColor: `${Colors.accent}08`,
-    },
-    nav: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 16,
-        paddingTop: 52,
-        paddingBottom: 8,
-    },
-    backButton: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        backgroundColor: Colors.white,
-        alignItems: 'center',
-        justifyContent: 'center',
-        ...Shadows.floatSm,
-        borderWidth: 1,
-        borderColor: Colors.slate100,
-    },
-    navTitle: {
-        fontSize: FontSize.xs,
-        fontWeight: FontWeight.bold,
-        letterSpacing: 2,
-        color: Colors.textMuted,
-    },
-    scrollContent: {
-        paddingHorizontal: 24,
-        paddingTop: 16,
-        paddingBottom: 120,
-    },
-    logoSection: {
-        alignItems: 'center',
-        marginBottom: 32,
-        marginTop: 8,
-    },
-    logoContainer: {
-        width: 128,
-        height: 128,
-        alignItems: 'center',
-        justifyContent: 'center',
-        position: 'relative',
-    },
-    logoBg: {
-        ...StyleSheet.absoluteFillObject,
-        backgroundColor: `${Colors.primary}08`,
-        borderRadius: 64,
-    },
-    truckIconOverlay: {
-        position: 'absolute',
-        bottom: 20,
-    },
-    title: {
-        fontSize: FontSize['2xl'],
-        fontWeight: FontWeight.bold,
-        color: Colors.textDark,
-        textAlign: 'center',
-        marginTop: 8,
-    },
-    subtitle: {
-        fontSize: FontSize.sm,
-        color: Colors.textMuted,
-        textAlign: 'center',
-        marginTop: 8,
-        maxWidth: 280,
-    },
-    form: {
-        gap: 20,
-    },
-    fieldGroup: {
-        gap: 6,
-    },
-    label: {
-        fontSize: FontSize.xs,
-        fontWeight: FontWeight.semibold,
-        color: Colors.textMuted,
-        letterSpacing: 1,
-        marginLeft: 4,
-    },
-    phoneRow: {
-        flexDirection: 'row',
-        gap: 8,
-    },
-    countryCode: {
-        paddingHorizontal: 12,
-        justifyContent: 'center',
-        backgroundColor: Colors.white,
-        borderRadius: BorderRadius.sm,
-        borderWidth: 1,
-        borderColor: Colors.slate200,
-        ...Shadows.floatSm,
-    },
-    countryCodeText: {
-        fontSize: FontSize.sm,
-        fontWeight: FontWeight.bold,
-        color: Colors.textDark,
-    },
-    selectBox: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: Colors.white,
-        borderRadius: BorderRadius.sm,
-        paddingVertical: 16,
-        paddingHorizontal: 16,
-        borderWidth: 1,
-        borderColor: Colors.slate200,
-        gap: 12,
-        ...Shadows.floatSm,
-    },
-    selectText: {
-        flex: 1,
-        fontSize: FontSize.base,
-        color: Colors.slate400,
-    },
-    termsRow: {
-        flexDirection: 'row',
-        alignItems: 'flex-start',
-        gap: 12,
-        paddingHorizontal: 4,
-        marginTop: 8,
-    },
-    checkbox: {},
-    termsText: {
-        flex: 1,
-        fontSize: FontSize.xs,
-        color: Colors.textMuted,
-        lineHeight: 18,
-    },
-    termsLink: {
-        color: Colors.primary,
-        fontWeight: FontWeight.bold,
-    },
-    bottomCta: {
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        paddingHorizontal: 24,
-        paddingBottom: 32,
-        paddingTop: 40,
-        backgroundColor: Colors.backgroundLight,
-    },
+    container: { flex: 1, backgroundColor: '#0f172a' },
+    hero: { position: 'absolute', top: 0, left: 0, right: 0, height: CARD_TOP + 40, overflow: 'hidden' },
+    glowCircle: { position: 'absolute', top: -40, left: '50%', marginLeft: -90, width: 180, height: 180, borderRadius: 90, backgroundColor: 'rgba(34,197,94,0.1)' },
+    decorCircle1: { position: 'absolute', top: -30, right: -50, width: 160, height: 160, borderRadius: 80, backgroundColor: 'rgba(255,255,255,0.03)' },
+    backBtn: { position: 'absolute', top: Platform.OS === 'ios' ? 52 : 36, left: 20, width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.1)', alignItems: 'center', justifyContent: 'center', zIndex: 10 },
+    heroContent: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: Platform.OS === 'ios' ? 56 : 40 },
+    logoRingOuter: { width: 90, height: 90, borderRadius: 45, backgroundColor: 'rgba(34,197,94,0.1)', alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
+    logoRingInner: { width: 70, height: 70, borderRadius: 35, backgroundColor: 'rgba(34,197,94,0.15)', alignItems: 'center', justifyContent: 'center' },
+    logoGradient: { width: 54, height: 54, borderRadius: 27, alignItems: 'center', justifyContent: 'center' },
+    appName: { fontSize: 24, fontWeight: '800' as any, color: Colors.white, letterSpacing: 1 },
+    roleBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 6, backgroundColor: 'rgba(34,197,94,0.12)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: BorderRadius.full, borderWidth: 1, borderColor: 'rgba(34,197,94,0.25)' },
+    roleText: { fontSize: FontSize.xs, fontWeight: FontWeight.bold, color: '#4ade80' },
+    card: { position: 'absolute', top: CARD_TOP, left: 0, right: 0, bottom: 0, backgroundColor: Colors.white, borderTopLeftRadius: 32, borderTopRightRadius: 32, ...Shadows.float },
+    cardScroll: { paddingHorizontal: 24, paddingTop: 28, paddingBottom: 40, gap: 14 },
+    cardTitle: { fontSize: FontSize.xl, fontWeight: FontWeight.extrabold, color: Colors.slate900 },
+    cardSubtitle: { fontSize: FontSize.sm, color: Colors.slate500, marginTop: -6 },
+    nameRow: { flexDirection: 'row', gap: 10 },
+    fieldGroup: { gap: 5 },
+    label: { fontSize: 10, fontWeight: FontWeight.bold, color: Colors.slate400, letterSpacing: 0.8, textTransform: 'uppercase' },
+    capacityGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+    capacityOption: { flex: 1, minWidth: '44%', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 13, borderRadius: BorderRadius.md, borderWidth: 1.5, borderColor: Colors.slate200, backgroundColor: Colors.white, overflow: 'hidden' },
+    capacityOptionSelected: { borderColor: '#22c55e' },
+    capacityText: { fontSize: FontSize.sm, fontWeight: FontWeight.semibold, color: Colors.slate500 },
+    capacityTextSelected: { color: Colors.white, fontWeight: FontWeight.bold },
+    terms: { fontSize: 11, textAlign: 'center', color: Colors.slate400, lineHeight: 17, paddingHorizontal: 8 },
+    termsLink: { color: '#16a34a', fontWeight: FontWeight.bold },
+    btn: { borderRadius: BorderRadius.full, overflow: 'hidden', shadowColor: '#16a34a', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.4, shadowRadius: 12, elevation: 8 },
+    btnGradient: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 17, gap: 8 },
+    btnText: { fontSize: FontSize.base, fontWeight: FontWeight.bold, color: Colors.white },
+    loginRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
+    loginText: { fontSize: FontSize.sm, color: Colors.slate500 },
+    loginLink: { fontSize: FontSize.sm, fontWeight: FontWeight.bold, color: '#16a34a' },
 });

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ViewStyle } from 'react-native';
 import { Colors, BorderRadius } from '../constants';
 
@@ -12,6 +12,7 @@ interface ChipSelectorProps {
     multiple?: boolean;
     onSelectionChange?: (selected: string[]) => void;
     style?: ViewStyle;
+    initialValue?: string[];
 }
 
 export const ChipSelector: React.FC<ChipSelectorProps> = ({
@@ -19,8 +20,16 @@ export const ChipSelector: React.FC<ChipSelectorProps> = ({
     multiple = true,
     onSelectionChange,
     style,
+    initialValue,
 }) => {
-    const [selected, setSelected] = useState<string[]>([]);
+    const [selected, setSelected] = useState<string[]>(initialValue ?? []);
+
+    // Sync when initialValue changes (loaded from DB)
+    useEffect(() => {
+        if (initialValue && initialValue.length > 0) {
+            setSelected(initialValue);
+        }
+    }, [JSON.stringify(initialValue)]);
 
     const handlePress = (id: string) => {
         let newSelected: string[];
