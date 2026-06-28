@@ -17,6 +17,7 @@ export default {
         min: 'د',
         da: 'دج',
         liters: 'لتر',
+        unknown: 'غير معروف',
     },
 
     // ── Onboarding ──
@@ -83,6 +84,10 @@ export default {
         confirmPassword: 'تأكيد كلمة المرور',
         passwordsMismatch: 'كلمات المرور غير متطابقة.',
         passwordResetSuccess: 'تم إعادة تعيين كلمة المرور بنجاح.',
+        testClientTitle: 'حساب اختبار العميل (اضغط للملء)',
+        testTransporterTitle: 'حساب اختبار الناقل (اضغط)',
+        testEmail: 'البريد الإلكتروني',
+        testPassword: 'كلمة المرور',
     },
 
     // ── Tabs ──
@@ -174,10 +179,24 @@ export default {
         orderAcceptedMsg: 'لقد قبلت الطلب {{id}}',
         // Dashboard
         hello: 'مرحباً',
+        greeting: 'مرحباً',
+        driver: 'ناقل',
+        noMission: 'لا توجد مهمة نشطة',
         todayRevenue: 'إيرادات اليوم',
         lastTrip: 'آخر رحلة',
         completedOrders: 'الطلبات المكتملة',
         nextMission: 'المهمة التالية',
+        documentsPopupTitle: 'المستندات المطلوبة',
+        documentsPopupSubtitle: 'للبدء في تلقي الطلبات ، يرجى تحميل المستندات الرسمية الخاصة بك.',
+        carteGrise: 'البطاقة الرمادية للمركبة',
+        permisConduire: 'رخصة القيادة',
+        autorisation: 'تصريح النقل',
+        uploadDocument: 'تحميل',
+        uploaded: 'تم التحميل ✓',
+        submitDocuments: 'إرسال المستندات',
+        doItLater: 'القيام بذلك لاحقا',
+        testFillDocsTitle: 'اختبار: تعبئة المستندات',
+        testFillDocsSubtitle: 'اضغط لمحاكاة الرفع',
     },
 
     // ── New Mission ──
@@ -220,6 +239,7 @@ export default {
         logout: 'تسجيل الخروج',
         myDocuments: 'مستنداتي',
         transporterRole: 'ناقل • صهريج {{capacity}} لتر',
+        noName: 'مستخدم',
     },
 
     // ── Language ──
@@ -294,6 +314,14 @@ export default {
         active: 'نشط',
         done: 'منجز',
         noMissions: 'لا توجد مهمات',
+        filter_all: 'الكل',
+        filter_inProgress: 'جاري',
+        filter_completed: 'مكتمل',
+        filter_cancelled: 'ملغي',
+        inProgress: 'جاري',
+        completed: 'مكتمل',
+        cancelled: 'ملغي',
+        totalAmount: 'المبلغ الإجمالي',
     },
 
     // ── Revenue ──
@@ -303,6 +331,9 @@ export default {
         thisWeek: 'هذا الأسبوع',
         thisMonth: 'هذا الشهر',
         totalEarnings: 'إجمالي الأرباح',
+        totalBalance: 'الرصيد الإجمالي',
+        history: 'السجل',
+        noTransactions: 'لا توجد معاملات',
         trips: 'رحلات',
     },
 } as const;

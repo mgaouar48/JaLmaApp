@@ -34,21 +34,18 @@ export default function TransporterLoginScreen() {
             return;
         }
 
-        // Verify the user is actually a driver
-        if (data.user) {
-            const { data: profile } = await supabase
-                .from('profiles')
-                .select('role')
-                .eq('id', data.user.id)
-                .single();
-
-            if (profile?.role !== 'driver') {
-                await supabase.auth.signOut();
-                Alert.alert(t('common.error'), t('auth.notADriver'));
-                return;
-            }
+        // Read role from auth metadata (no extra DB call, no RLS timing issue)
+        const role = data.user?.user_metadata?.role;
+        if (role !== 'driver') {
+            await supabase.auth.signOut();
+            Alert.alert(
+                t('common.error'),
+                t('auth.notADriver') || 'Ce compte n\'est pas un compte transporteur.'
+            );
+            return;
         }
-        // Auth context will auto-route to /(transporter)/home
+
+        router.replace('/(transporter)/home');
     };
 
     return (
@@ -70,6 +67,23 @@ export default function TransporterLoginScreen() {
                     <Text style={styles.title}>{t('auth.transporterLogin')}</Text>
                     <Text style={styles.subtitle}>{t('auth.transporterSubtitle')}</Text>
                 </View>
+
+                {/* TEST CREDENTIALS */}
+                <TouchableOpacity 
+                    style={styles.testContainer} 
+                    onPress={() => {
+                        setEmail('driver-test@gmail.com');
+                        setPassword('password123');
+                    }}
+                    activeOpacity={0.8}
+                >
+                    <MaterialIcons name="local-shipping" size={20} color={Colors.primary} />
+                    <View style={{ flex: 1, marginLeft: 8 }}>
+                        <Text style={styles.testTitle}>{t('auth.testTransporterTitle')}</Text>
+                        <Text style={styles.testText}>{t('auth.testEmail')}: driver-test@gmail.com</Text>
+                        <Text style={styles.testText}>{t('auth.testPassword')}: password123</Text>
+                    </View>
+                </TouchableOpacity>
 
                 {/* Form */}
                 <View style={styles.form}>
@@ -143,6 +157,18 @@ const styles = StyleSheet.create({
     },
     title: { fontSize: FontSize['2xl'], fontWeight: FontWeight.bold, color: Colors.primary },
     subtitle: { fontSize: FontSize.base, fontWeight: FontWeight.medium, color: Colors.slate500, marginTop: 4 },
+    testContainer: {
+        backgroundColor: `${Colors.primary}15`,
+        padding: 16,
+        borderRadius: BorderRadius.lg,
+        borderWidth: 1,
+        borderColor: `${Colors.primary}50`,
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 32,
+    },
+    testTitle: { fontSize: FontSize.sm, fontWeight: FontWeight.bold, color: Colors.slate800, marginBottom: 4 },
+    testText: { fontSize: FontSize.xs, color: Colors.slate600 },
     form: { gap: 24, flex: 1 },
     fieldGroup: { gap: 8 },
     label: { fontSize: FontSize.sm, fontWeight: FontWeight.semibold, color: Colors.slate700, marginLeft: 4 },

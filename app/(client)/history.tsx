@@ -5,40 +5,14 @@ import { Colors, FontSize, FontWeight, Shadows, BorderRadius } from '../../src/c
 import { OrderCard } from '../../src/components';
 import { useTranslation } from 'react-i18next';
 
-const orders = [
-    {
-        id: '1',
-        date: '12 Oct 2023, 14:30',
-        status: 'completed' as const,
-        volume: '1200 L',
-        price: '85,000 DZD',
-        transporterName: 'Hamid Transport',
-    },
-    {
-        id: '2',
-        date: "Aujourd'hui, 09:15",
-        status: 'in_progress' as const,
-        volume: '5000 L',
-        price: '320,000 DZD',
-        transporterName: 'Karim Express',
-    },
-    {
-        id: '3',
-        date: '28 Sept 2023, 10:00',
-        status: 'completed' as const,
-        volume: '2500 L',
-        price: '140,000 DZD',
-        transporterName: 'Sarl Logistique',
-    },
-    {
-        id: '4',
-        date: '15 Sept 2023, 18:45',
-        status: 'cancelled' as const,
-        volume: '800 L',
-        price: '55,000 DZD',
-        transporterName: 'Hamid Transport',
-    },
-];
+const orders: {
+    id: string;
+    date: string;
+    status: 'completed' | 'in_progress' | 'cancelled';
+    volume: string;
+    price: string;
+    transporterName: string;
+}[] = [];
 
 const filterKeys = ['all', 'inProgress', 'completed', 'cancelled'] as const;
 

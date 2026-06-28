@@ -50,9 +50,7 @@ export default function EditProfileScreen() {
                     <MaterialIcons name="arrow-back" size={20} color={Colors.primary} />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>{t('editProfile.title')}</Text>
-                <TouchableOpacity style={styles.saveBtnGhost} onPress={handleSave}>
-                    <Text style={styles.saveBtnText}>{t('editProfile.save')}</Text>
-                </TouchableOpacity>
+                <View style={{ width: 40 }} />
             </View>
 
             <ScrollView

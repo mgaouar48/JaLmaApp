@@ -17,6 +17,7 @@ export default {
         min: 'min',
         da: 'DA',
         liters: 'L',
+        unknown: 'Unknown',
     },
 
     // ── Onboarding ──
@@ -83,6 +84,10 @@ export default {
         confirmPassword: 'Confirm password',
         passwordsMismatch: 'Passwords do not match.',
         passwordResetSuccess: 'Your password has been reset.',
+        testClientTitle: 'Client Test Account (Tap to fill)',
+        testTransporterTitle: 'Transporter Test Account (Tap)',
+        testEmail: 'Email',
+        testPassword: 'Password',
     },
 
     // ── Tabs ──
@@ -174,10 +179,24 @@ export default {
         orderAcceptedMsg: 'You accepted order {{id}}',
         // Dashboard
         hello: 'Hello',
+        greeting: 'Hello',
+        driver: 'Driver',
+        noMission: 'No active mission',
         todayRevenue: "Today's Revenue",
         lastTrip: 'Last Trip',
         completedOrders: 'Completed Orders',
         nextMission: 'Next Mission',
+        documentsPopupTitle: 'Required Documents',
+        documentsPopupSubtitle: 'To start receiving orders, please upload your official documents.',
+        carteGrise: 'Vehicle Registration',
+        permisConduire: 'Driving License',
+        autorisation: 'Transport Authorization',
+        uploadDocument: 'Upload',
+        uploaded: 'Uploaded ✓',
+        submitDocuments: 'Submit Documents',
+        doItLater: 'Do it later',
+        testFillDocsTitle: 'Test: Fill Documents',
+        testFillDocsSubtitle: 'Tap to simulate upload',
     },
 
     // ── New Mission ──
@@ -220,6 +239,7 @@ export default {
         logout: 'Logout',
         myDocuments: 'My documents',
         transporterRole: 'Transporter • Tank {{capacity}}L',
+        noName: 'User',
     },
 
     // ── Language ──
@@ -294,6 +314,14 @@ export default {
         active: 'Active',
         done: 'Done',
         noMissions: 'No missions',
+        filter_all: 'All',
+        filter_inProgress: 'In Progress',
+        filter_completed: 'Completed',
+        filter_cancelled: 'Cancelled',
+        inProgress: 'In Progress',
+        completed: 'Completed',
+        cancelled: 'Cancelled',
+        totalAmount: 'Total amount',
     },
 
     // ── Revenue ──
@@ -303,6 +331,9 @@ export default {
         thisWeek: 'This week',
         thisMonth: 'This month',
         totalEarnings: 'Total earnings',
+        totalBalance: 'Total balance',
+        history: 'History',
+        noTransactions: 'No transactions',
         trips: 'trips',
     },
 } as const;

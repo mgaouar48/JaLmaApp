@@ -23,17 +23,28 @@ export default function LoginScreen() {
         }
 
         setLoading(true);
-        const { error } = await supabase.auth.signInWithPassword({
+        const { data, error } = await supabase.auth.signInWithPassword({
             email: email.trim(),
             password,
         });
-        setLoading(false);
+
 
         if (error) {
+            setLoading(false);
             Alert.alert(t('common.error'), error.message);
             return;
         }
-        // Auth context will auto-route based on role
+
+        // Read role from user metadata (no extra DB call to avoid timing constraints)
+        const role = data.user?.user_metadata?.role;
+
+        setLoading(false);
+
+        if (role === 'driver') {
+            router.replace('/(transporter)/home');
+        } else {
+            router.replace('/(client)');
+        }
     };
 
     return (
@@ -55,6 +66,23 @@ export default function LoginScreen() {
                     <Text style={styles.title}>{t('auth.welcomeTitle')}</Text>
                     <Text style={styles.subtitle}>{t('auth.welcomeSubtitle')}</Text>
                 </View>
+
+                {/* TEST CREDENTIALS */}
+                <TouchableOpacity 
+                    style={styles.testContainer} 
+                    onPress={() => {
+                        setEmail('client-test@gmail.com');
+                        setPassword('password123');
+                    }}
+                    activeOpacity={0.8}
+                >
+                    <MaterialIcons name="info-outline" size={20} color={Colors.accent} />
+                    <View style={{ flex: 1, marginLeft: 8 }}>
+                        <Text style={styles.testTitle}>{t('auth.testClientTitle')}</Text>
+                        <Text style={styles.testText}>{t('auth.testEmail')}: client-test@gmail.com</Text>
+                        <Text style={styles.testText}>{t('auth.testPassword')}: password123</Text>
+                    </View>
+                </TouchableOpacity>
 
                 {/* Form */}
                 <View style={styles.form}>
@@ -136,6 +164,18 @@ const styles = StyleSheet.create({
     logoGradient: { ...StyleSheet.absoluteFillObject, backgroundColor: `${Colors.primary}08` },
     title: { fontSize: FontSize['2xl'], fontWeight: FontWeight.bold, color: Colors.slate900, marginBottom: 8 },
     subtitle: { fontSize: FontSize.sm, color: Colors.slate500 },
+    testContainer: {
+        backgroundColor: `${Colors.accent}15`,
+        padding: 16,
+        borderRadius: BorderRadius.lg,
+        borderWidth: 1,
+        borderColor: `${Colors.accent}50`,
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 32,
+    },
+    testTitle: { fontSize: FontSize.sm, fontWeight: FontWeight.bold, color: Colors.slate800, marginBottom: 4 },
+    testText: { fontSize: FontSize.xs, color: Colors.slate600 },
     form: { gap: 24 },
     fieldGroup: { gap: 8 },
     label: { fontSize: FontSize.sm, fontWeight: FontWeight.medium, color: Colors.slate700, marginLeft: 4 },

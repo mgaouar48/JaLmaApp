@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform,
 } from 'react-native';
@@ -6,10 +6,19 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { Colors, FontSize, FontWeight, Shadows, BorderRadius } from '../../src/constants';
 import { useTranslation } from 'react-i18next';
+import { useAuth } from '../../src/context/AuthContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function TransporterDashboard() {
-    const [isOnline, setIsOnline] = useState(true);
     const { t } = useTranslation();
+    const { profile } = useAuth();
+    const [docsSubmitted, setDocsSubmitted] = useState(true);
+
+    useEffect(() => {
+        AsyncStorage.getItem('docs_submitted').then(val => {
+            setDocsSubmitted(val === 'true');
+        }).catch(() => { });
+    }, []);
 
     return (
         <View style={styles.container}>
@@ -46,11 +55,16 @@ export default function TransporterDashboard() {
                         </View>
                         <View>
                             <Text style={styles.greeting}>{t('transporter.greeting')}</Text>
-                            <Text style={styles.name}>Mamadou</Text>
+                            <Text style={styles.name}>
+                                {profile?.first_name
+                                    ? `${profile.first_name} ${profile.last_name ?? ''}`.trim()
+                                    : t('transporter.driver')}
+                            </Text>
                         </View>
                     </View>
-                    <TouchableOpacity style={styles.notifBtn}>
+                    <TouchableOpacity style={styles.notifBtn} onPress={() => router.push('/notifications')}>
                         <MaterialIcons name="notifications" size={24} color={Colors.slate600} />
+                        {!docsSubmitted && <View style={styles.notifBadge} />}
                     </TouchableOpacity>
                 </View>
 
@@ -75,13 +89,9 @@ export default function TransporterDashboard() {
                                 </View>
                                 <Text style={styles.revenueLabel}>{t('transporter.todayRevenue')}</Text>
                             </View>
-                            <View style={styles.trendBadge}>
-                                <MaterialIcons name="trending-up" size={14} color="#86efac" />
-                                <Text style={styles.trendText}>+15%</Text>
-                            </View>
                         </View>
                         <View style={styles.revenueAmount}>
-                            <Text style={styles.revenueValue}>12,500</Text>
+                            <Text style={styles.revenueValue}>--</Text>
                             <Text style={styles.revenueCurrency}>DA</Text>
                         </View>
                         <Text style={styles.revenueSubtext}>{t('transporter.lastTrip')}</Text>
@@ -100,34 +110,21 @@ export default function TransporterDashboard() {
                         <View style={styles.statsFooter}>
                             <View>
                                 <Text style={styles.statsValue}>
-                                    8<Text style={styles.statsTotal}>/12</Text>
+                                    --<Text style={styles.statsTotal}></Text>
                                 </Text>
-                            </View>
-                            <View style={styles.progressCircle}>
-                                <Text style={styles.progressText}>66%</Text>
                             </View>
                         </View>
                     </View>
 
-                    {/* Next mission */}
+                    {/* No active mission */}
                     <View style={styles.missionSection}>
                         <Text style={styles.missionTitle}>{t('transporter.nextMission')}</Text>
-                        <View style={styles.missionCard}>
-                            <View style={styles.missionInfo}>
-                                <Text style={styles.missionAddress}>Zone 4, Rue du Canal</Text>
-                                <Text style={styles.missionDesc}>Livraison de 50 packs d'eau</Text>
-                            </View>
-                            <TouchableOpacity
-                                style={styles.missionNavBtn}
-                                onPress={() => router.push('/new-mission')}
-                            >
-                                <MaterialIcons name="near-me" size={20} color={Colors.primary} />
-                            </TouchableOpacity>
+                        <View style={styles.emptyMission}>
+                            <MaterialIcons name="assignment" size={32} color={Colors.slate300} />
+                            <Text style={styles.emptyMissionText}>{t('transporter.noMission')}</Text>
                         </View>
                     </View>
                 </ScrollView>
-
-
             </View>
         </View>
     );
@@ -225,60 +222,16 @@ const styles = StyleSheet.create({
         alignItems: 'center', justifyContent: 'center',
         ...Shadows.floatSm,
     },
-    toggleOuter: {
-        paddingHorizontal: 24,
-        marginBottom: 24,
-    },
-    toggleContainer: {
-        height: 68,
-        backgroundColor: 'rgba(226,232,240,0.8)',
-        borderRadius: 34,
-        padding: 6,
-        position: 'relative',
-    },
-    toggleLabels: {
-        ...StyleSheet.absoluteFillObject,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-around',
-        paddingHorizontal: 8,
-    },
-    toggleLabelText: {
-        fontSize: FontSize.xs,
-        fontWeight: FontWeight.extrabold,
-        color: Colors.slate400,
-        textTransform: 'uppercase',
-        letterSpacing: 1,
-    },
-    toggleLabelActive: {
-        color: Colors.slate600,
-    },
-    toggleKnob: {
+    notifBadge: {
         position: 'absolute',
         top: 6,
-        height: 56,
-        width: '50%',
-        borderRadius: 28,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 8,
-        ...Shadows.float,
-    },
-    toggleKnobOn: {
         right: 6,
-        backgroundColor: Colors.statusGreen,
-    },
-    toggleKnobOff: {
-        left: 6,
+        width: 10,
+        height: 10,
+        borderRadius: 5,
         backgroundColor: Colors.statusRed,
-    },
-    toggleKnobText: {
-        color: Colors.white,
-        fontSize: FontSize.sm,
-        fontWeight: FontWeight.extrabold,
-        textTransform: 'uppercase',
-        letterSpacing: 1,
+        borderWidth: 2,
+        borderColor: Colors.white,
     },
     scroll: {
         flex: 1,
@@ -325,20 +278,6 @@ const styles = StyleSheet.create({
         fontSize: FontSize.sm,
         fontWeight: FontWeight.medium,
         color: 'rgba(255,255,255,0.8)',
-    },
-    trendBadge: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 4,
-        backgroundColor: 'rgba(74,222,128,0.2)',
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: BorderRadius.full,
-    },
-    trendText: {
-        fontSize: FontSize.xs,
-        fontWeight: FontWeight.bold,
-        color: '#86efac',
     },
     revenueAmount: {
         flexDirection: 'row',
@@ -407,20 +346,6 @@ const styles = StyleSheet.create({
         fontWeight: FontWeight.medium,
         color: Colors.slate400,
     },
-    progressCircle: {
-        width: 48,
-        height: 48,
-        borderRadius: 24,
-        borderWidth: 4,
-        borderColor: Colors.primary,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    progressText: {
-        fontSize: 10,
-        fontWeight: FontWeight.bold,
-        color: Colors.primary,
-    },
     missionSection: {
         marginTop: 8,
     },
@@ -430,32 +355,18 @@ const styles = StyleSheet.create({
         color: Colors.slate800,
         marginBottom: 12,
     },
-    missionCard: {
+    emptyMission: {
         backgroundColor: Colors.white,
-        padding: 16,
         borderRadius: BorderRadius.lg,
-        ...Shadows.floatSm,
-        borderLeftWidth: 4,
-        borderLeftColor: Colors.primary,
-        flexDirection: 'row',
+        padding: 24,
         alignItems: 'center',
-        justifyContent: 'space-between',
+        justifyContent: 'center',
+        gap: 10,
+        ...Shadows.floatSm,
     },
-    missionInfo: {},
-    missionAddress: {
-        fontSize: FontSize.base,
-        fontWeight: FontWeight.bold,
-        color: Colors.slate800,
+    emptyMissionText: {
+        fontSize: FontSize.sm,
+        color: Colors.slate400,
+        fontWeight: FontWeight.medium,
     },
-    missionDesc: {
-        fontSize: FontSize.xs,
-        color: Colors.slate500,
-        marginTop: 4,
-    },
-    missionNavBtn: {
-        width: 40, height: 40, borderRadius: 20,
-        backgroundColor: `${Colors.primary}15`,
-        alignItems: 'center', justifyContent: 'center',
-    },
-
 });

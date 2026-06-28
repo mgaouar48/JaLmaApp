@@ -49,6 +49,7 @@ export default function OrderConfigScreen() {
 
     // Location state
     const mapRef = useRef<MapView>(null);
+    const [locationGranted, setLocationGranted] = useState(false);
     const [address, setAddress] = useState('24 Rue Didouche Mourad, Alger');
     const [pinCoordinate, setPinCoordinate] = useState({
         latitude: TLEMCEN.latitude,
@@ -70,6 +71,7 @@ export default function OrderConfigScreen() {
         (async () => {
             let { status } = await Location.requestForegroundPermissionsAsync();
             if (status !== 'granted') return;
+            setLocationGranted(true);
             let loc = await Location.getCurrentPositionAsync({});
             const coord = {
                 latitude: loc.coords.latitude,
@@ -265,7 +267,7 @@ export default function OrderConfigScreen() {
                         style={styles.map}
                         initialRegion={mapRegion}
                         onPress={handleMapPress}
-                        showsUserLocation={true}
+                        showsUserLocation={locationGranted}
                         showsMyLocationButton={false}
                     >
                         <Marker
@@ -306,7 +308,7 @@ export default function OrderConfigScreen() {
                             longitudeDelta: 0.008,
                         }}
                         onPress={handleMapPress}
-                        showsUserLocation={true}
+                        showsUserLocation={locationGranted}
                         showsMyLocationButton={false}
                     >
                         <Marker
@@ -384,7 +386,18 @@ export default function OrderConfigScreen() {
                         onPress={async () => {
                             setSubmitting(true);
                             try {
+                                // Get the current session to ensure we have a valid token
+                                const { data: { session } } = await supabase.auth.getSession();
+                                if (!session) {
+                                    Alert.alert(t('common.error'), 'Session expirée. Veuillez vous reconnecter.');
+                                    setSubmitting(false);
+                                    return;
+                                }
+
                                 const { data, error } = await supabase.functions.invoke('create-order', {
+                                    headers: {
+                                        Authorization: `Bearer ${session.access_token}`,
+                                    },
                                     body: {
                                         delivery_lat: pinCoordinate.latitude,
                                         delivery_lon: pinCoordinate.longitude,

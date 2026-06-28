@@ -29,13 +29,13 @@ export default function ActiveDeliveryScreen() {
         clientLon?: string;
     }>();
 
-    const orderId = params.orderId || 'CMD-2024-0847';
-    const clientName = params.clientName || 'Karim Belkacem';
-    const clientPhone = params.clientPhone || '+213 6 55 12 34 56';
-    const clientAddress = params.clientAddress || '12 Rue Didouche Mourad, Tlemcen';
-    const distance = params.distance || '2.3 km';
-    const tarif = params.tarif || '1 500 DA';
-    const volume = params.volume || '3 000 L';
+    const orderId = params.orderId || '';
+    const clientName = params.clientName || t('common.unknown');
+    const clientPhone = params.clientPhone || '';
+    const clientAddress = params.clientAddress || '';
+    const distance = params.distance || '--';
+    const tarif = params.tarif || '--';
+    const volume = params.volume || '--';
 
     // Client destination
     const clientLat = params.clientLat ? parseFloat(params.clientLat) : TLEMCEN.latitude - 0.01;

@@ -1,39 +1,96 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
-    View, Text, StyleSheet, TouchableOpacity, Platform, Modal, Linking, Alert,
+    View, Text, StyleSheet, TouchableOpacity, Platform, Alert, Modal, Animated,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
 import { Colors, FontSize, FontWeight, BorderRadius, Shadows } from '../../src/constants';
 import { useTranslation } from 'react-i18next';
 import MapView, { PROVIDER_GOOGLE } from 'react-native-maps';
 import * as Location from 'expo-location';
-
-// Simulated incoming order
-const INCOMING_ORDER = {
-    id: 'CMD-2024-0847',
-    clientName: 'Karim Belkacem',
-    clientRating: 4.7,
-    clientPhone: '+213 6 55 12 34 56',
-    address: '12 Rue Didouche Mourad, Alger',
-    distance: '2.3 km',
-    tarif: '1 500 DA',
-    volume: '3 000 L',
-};
+import { supabase } from '../../src/lib/supabase';
+import { useAuth } from '../../src/context/AuthContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function TransporterHomeScreen() {
     const insets = useSafeAreaInsets();
-    const mapRef = React.useRef<MapView>(null);
+    const mapRef = useRef<MapView>(null);
     const [isOnline, setIsOnline] = useState(false);
     const [location, setLocation] = useState<Location.LocationObject | null>(null);
-    const [showOrder, setShowOrder] = useState(false);
+    const [locationGranted, setLocationGranted] = useState(false);
+    const [updating, setUpdating] = useState(false);
     const { t } = useTranslation();
+    const { session } = useAuth();
+
+    // Documents popup state
+    const [showDocsPopup, setShowDocsPopup] = useState(false);
+    const [uploadedDocs, setUploadedDocs] = useState({
+        carteGrise: false,
+        permisConduire: false,
+        autorisation: false,
+    });
+    const fadeAnim = useRef(new Animated.Value(0)).current;
+    const slideAnim = useRef(new Animated.Value(50)).current;
+
+    // Show popup every time unless documents have been submitted
+    useEffect(() => {
+        const checkDocsPopup = async () => {
+            try {
+                const submitted = await AsyncStorage.getItem('docs_submitted');
+                if (!submitted) {
+                    setShowDocsPopup(true);
+                    Animated.parallel([
+                        Animated.timing(fadeAnim, {
+                            toValue: 1,
+                            duration: 300,
+                            useNativeDriver: true,
+                        }),
+                        Animated.timing(slideAnim, {
+                            toValue: 0,
+                            duration: 400,
+                            useNativeDriver: true,
+                        }),
+                    ]).start();
+                }
+            } catch { }
+        };
+        checkDocsPopup();
+    }, []);
+
+    // "Faire plus tard" — only closes for this session, does NOT save
+    const handleDismissPopup = () => {
+        Animated.timing(fadeAnim, {
+            toValue: 0,
+            duration: 200,
+            useNativeDriver: true,
+        }).start(() => setShowDocsPopup(false));
+    };
+
+    const handleUploadDoc = (docType: 'carteGrise' | 'permisConduire' | 'autorisation') => {
+        // Placeholder — simulate upload
+        setUploadedDocs(prev => ({ ...prev, [docType]: true }));
+    };
+
+    // Only submitting all documents saves the flag permanently
+    const handleSubmitDocuments = async () => {
+        const allUploaded = Object.values(uploadedDocs).every(v => v);
+        if (!allUploaded) {
+            Alert.alert(t('common.error'), 'Veuillez télécharger tous les documents.');
+            return;
+        }
+        try {
+            await AsyncStorage.setItem('docs_submitted', 'true');
+        } catch { }
+        Alert.alert(t('common.success'), 'Documents soumis avec succès !', [
+            { text: t('common.ok'), onPress: handleDismissPopup },
+        ]);
+    };
 
     useEffect(() => {
         (async () => {
             let { status } = await Location.requestForegroundPermissionsAsync();
             if (status !== 'granted') return;
+            setLocationGranted(true);
             let loc = await Location.getCurrentPositionAsync({});
             setLocation(loc);
             mapRef.current?.animateToRegion({
@@ -45,15 +102,50 @@ export default function TransporterHomeScreen() {
         })();
     }, []);
 
-    // Simulate incoming order when going online
+    // Fetch current online status from DB on mount
     useEffect(() => {
-        if (isOnline) {
-            const timer = setTimeout(() => setShowOrder(true), 2000);
-            return () => clearTimeout(timer);
-        } else {
-            setShowOrder(false);
+        if (!session?.user?.id) return;
+        supabase
+            .from('drivers')
+            .select('is_online')
+            .eq('id', session.user.id)
+            .single()
+            .then(({ data }) => {
+                if (data) setIsOnline(data.is_online);
+            });
+    }, [session?.user?.id]);
+
+    const handleToggle = async () => {
+        if (!session?.user?.id) return;
+        const newStatus = !isOnline;
+        setUpdating(true);
+
+        // Build location value for PostGIS
+        let locationUpdate: Record<string, unknown> = { is_online: newStatus };
+        if (newStatus && location) {
+            // Send current location when going online
+            locationUpdate.current_location = `SRID=4326;POINT(${location.coords.longitude} ${location.coords.latitude})`;
+            locationUpdate.last_location_update = new Date().toISOString();
         }
-    }, [isOnline]);
+        if (!newStatus) {
+            // Going offline: mark not available either
+            locationUpdate.is_available = false;
+        } else {
+            locationUpdate.is_available = true;
+        }
+
+        const { error } = await supabase
+            .from('drivers')
+            .update(locationUpdate)
+            .eq('id', session.user.id);
+
+        setUpdating(false);
+        if (error) {
+            Alert.alert(t('common.error'), error.message);
+        } else {
+            setIsOnline(newStatus);
+        }
+    };
 
     const handleRecenter = () => {
         if (location) {
@@ -66,51 +158,11 @@ export default function TransporterHomeScreen() {
         }
     };
 
-    const handleCall = () => {
-        Linking.openURL(`tel:${INCOMING_ORDER.clientPhone.replace(/\s/g, '')}`);
-    };
-
-    const handleAccept = () => {
-        setShowOrder(false);
-        router.push({
-            pathname: '/active-delivery',
-            params: {
-                orderId: INCOMING_ORDER.id,
-                clientName: INCOMING_ORDER.clientName,
-                clientPhone: INCOMING_ORDER.clientPhone,
-                clientAddress: INCOMING_ORDER.address,
-                distance: INCOMING_ORDER.distance,
-                tarif: INCOMING_ORDER.tarif,
-                volume: INCOMING_ORDER.volume,
-            },
-        });
-    };
-
-    const handleReject = () => {
-        setShowOrder(false);
-        Alert.alert(t('transporter.orderRejected'), t('transporter.orderRejectedMsg'));
-    };
-
     const initialRegion = {
         latitude: 34.8828,
         longitude: -1.3148,
         latitudeDelta: 0.05,
         longitudeDelta: 0.05,
-    };
-
-    const renderStars = (rating: number) => {
-        const stars = [];
-        for (let i = 1; i <= 5; i++) {
-            stars.push(
-                <MaterialIcons
-                    key={i}
-                    name={i <= Math.floor(rating) ? 'star' : i - 0.5 <= rating ? 'star-half' : 'star-border'}
-                    size={16}
-                    color="#f59e0b"
-                />
-            );
-        }
-        return stars;
     };
 
     return (
@@ -121,7 +173,7 @@ export default function TransporterHomeScreen() {
                 provider={PROVIDER_GOOGLE}
                 style={StyleSheet.absoluteFillObject}
                 initialRegion={initialRegion}
-                showsUserLocation={true}
+                showsUserLocation={locationGranted}
                 showsMyLocationButton={false}
             />
 
@@ -131,9 +183,10 @@ export default function TransporterHomeScreen() {
             {/* Online/Offline Toggle */}
             <View style={styles.toggleOuter}>
                 <TouchableOpacity
-                    style={styles.toggleContainer}
-                    onPress={() => setIsOnline(!isOnline)}
+                    style={[styles.toggleContainer, updating && styles.toggleDisabled]}
+                    onPress={handleToggle}
                     activeOpacity={0.8}
+                    disabled={updating}
                 >
                     <View style={styles.toggleLabels}>
                         <Text style={[styles.toggleLabelText, !isOnline && styles.toggleLabelActive]}>
@@ -150,7 +203,7 @@ export default function TransporterHomeScreen() {
                         ]}
                     >
                         <MaterialIcons
-                            name={isOnline ? 'radar' : 'power-settings-new'}
+                            name={updating ? 'hourglass-empty' : isOnline ? 'radar' : 'power-settings-new'}
                             size={20}
                             color={Colors.white}
                         />
@@ -162,7 +215,7 @@ export default function TransporterHomeScreen() {
             </View>
 
             {/* Status indicator */}
-            {isOnline && !showOrder && (
+            {isOnline && (
                 <View style={styles.waitingBanner}>
                     <MaterialIcons name="radar" size={20} color={Colors.primary} />
                     <Text style={styles.waitingText}>{t('transporter.waitingForOrders')}</Text>
@@ -177,99 +230,104 @@ export default function TransporterHomeScreen() {
                 <MaterialIcons name="my-location" size={24} color={Colors.textDark} />
             </TouchableOpacity>
 
-            {/* Incoming Order Modal */}
+            {/* Documents Popup Modal */}
             <Modal
-                visible={showOrder}
-                transparent={true}
-                animationType="slide"
-                onRequestClose={() => setShowOrder(false)}
+                visible={showDocsPopup}
+                transparent
+                animationType="none"
+                onRequestClose={handleDismissPopup}
             >
-                <View style={styles.modalOverlay}>
-                    <View style={[styles.modalSheet, { paddingBottom: insets.bottom + 16 }]}>
-                        {/* Modal Header */}
-                        <View style={styles.modalHandle} />
-                        <View style={styles.modalHeader}>
-                            <View style={styles.modalHeaderIcon}>
-                                <MaterialIcons name="notifications-active" size={24} color={Colors.white} />
-                            </View>
-                            <Text style={styles.modalTitle}>{t('transporter.newOrder')}</Text>
+                <Animated.View style={[styles.modalOverlay, { opacity: fadeAnim }]}>
+                    <Animated.View style={[styles.modalCard, { transform: [{ translateY: slideAnim }] }]}>
+                        {/* Header icon */}
+                        <View style={styles.modalIconContainer}>
+                            <MaterialIcons name="folder-open" size={36} color={Colors.white} />
                         </View>
 
-                        {/* Client Info */}
-                        <View style={styles.clientCard}>
-                            <View style={styles.clientRow}>
-                                <View style={styles.clientAvatar}>
-                                    <MaterialIcons name="person" size={28} color={Colors.primary} />
-                                </View>
-                                <View style={styles.clientInfo}>
-                                    <Text style={styles.clientName}>{INCOMING_ORDER.clientName}</Text>
-                                    <View style={styles.ratingRow}>
-                                        {renderStars(INCOMING_ORDER.clientRating)}
-                                        <Text style={styles.ratingText}>{INCOMING_ORDER.clientRating}</Text>
+                        <Text style={styles.modalTitle}>{t('transporter.documentsPopupTitle')}</Text>
+                        <Text style={styles.modalSubtitle}>{t('transporter.documentsPopupSubtitle')}</Text>
+
+                        {/* TEST CREDENTIALS */}
+                        <TouchableOpacity 
+                            style={styles.testContainer} 
+                            onPress={() => {
+                                setUploadedDocs({ carteGrise: true, permisConduire: true, autorisation: true });
+                            }}
+                            activeOpacity={0.8}
+                        >
+                            <MaterialIcons name="science" size={20} color={Colors.accent} />
+                            <View style={{ flex: 1, marginLeft: 8 }}>
+                                <Text style={styles.testTitle}>{t('transporter.testFillDocsTitle')}</Text>
+                                <Text style={styles.testText}>{t('transporter.testFillDocsSubtitle')}</Text>
+                            </View>
+                        </TouchableOpacity>
+
+                        {/* Document list */}
+                        <View style={styles.docsList}>
+                            {([
+                                { key: 'carteGrise' as const, icon: 'directions-car' as const, label: t('transporter.carteGrise') },
+                                { key: 'permisConduire' as const, icon: 'badge' as const, label: t('transporter.permisConduire') },
+                                { key: 'autorisation' as const, icon: 'verified' as const, label: t('transporter.autorisation') },
+                            ]).map((doc) => (
+                                <View key={doc.key} style={styles.docRow}>
+                                    <View style={[
+                                        styles.docIconBg,
+                                        uploadedDocs[doc.key] && styles.docIconBgDone,
+                                    ]}>
+                                        <MaterialIcons
+                                            name={uploadedDocs[doc.key] ? 'check-circle' : doc.icon}
+                                            size={22}
+                                            color={uploadedDocs[doc.key] ? Colors.statusGreen : Colors.primary}
+                                        />
                                     </View>
+                                    <Text style={[
+                                        styles.docLabel,
+                                        uploadedDocs[doc.key] && styles.docLabelDone,
+                                    ]}>{doc.label}</Text>
+                                    <TouchableOpacity
+                                        style={[
+                                            styles.uploadBtn,
+                                            uploadedDocs[doc.key] && styles.uploadBtnDone,
+                                        ]}
+                                        onPress={() => handleUploadDoc(doc.key)}
+                                        disabled={uploadedDocs[doc.key]}
+                                    >
+                                        <MaterialIcons
+                                            name={uploadedDocs[doc.key] ? 'check' : 'cloud-upload'}
+                                            size={16}
+                                            color={uploadedDocs[doc.key] ? Colors.statusGreen : Colors.white}
+                                        />
+                                        <Text style={[
+                                            styles.uploadBtnText,
+                                            uploadedDocs[doc.key] && styles.uploadBtnTextDone,
+                                        ]}>
+                                            {uploadedDocs[doc.key]
+                                                ? t('transporter.uploaded')
+                                                : t('transporter.uploadDocument')}
+                                        </Text>
+                                    </TouchableOpacity>
                                 </View>
-                                <TouchableOpacity style={styles.callBtn} onPress={handleCall}>
-                                    <MaterialIcons name="phone" size={22} color={Colors.white} />
-                                </TouchableOpacity>
-                            </View>
+                            ))}
                         </View>
 
-                        {/* Order Details */}
-                        <View style={styles.detailsCard}>
-                            <View style={styles.detailRow}>
-                                <MaterialIcons name="place" size={20} color={Colors.primary} />
-                                <View style={styles.detailContent}>
-                                    <Text style={styles.detailLabel}>{t('transporter.location')}</Text>
-                                    <Text style={styles.detailValue}>{INCOMING_ORDER.address}</Text>
-                                </View>
-                            </View>
-                            <View style={styles.detailDivider} />
-                            <View style={styles.detailRow}>
-                                <MaterialIcons name="straighten" size={20} color={Colors.primary} />
-                                <View style={styles.detailContent}>
-                                    <Text style={styles.detailLabel}>Distance</Text>
-                                    <Text style={styles.detailValue}>{INCOMING_ORDER.distance}</Text>
-                                </View>
-                            </View>
-                            <View style={styles.detailDivider} />
-                            <View style={styles.detailRow}>
-                                <MaterialIcons name="water-drop" size={20} color={Colors.primary} />
-                                <View style={styles.detailContent}>
-                                    <Text style={styles.detailLabel}>{t('transporter.volume')}</Text>
-                                    <Text style={styles.detailValue}>{INCOMING_ORDER.volume}</Text>
-                                </View>
-                            </View>
-                            <View style={styles.detailDivider} />
-                            <View style={styles.detailRow}>
-                                <MaterialIcons name="payments" size={20} color={Colors.primary} />
-                                <View style={styles.detailContent}>
-                                    <Text style={styles.detailLabel}>{t('transporter.tariff')}</Text>
-                                    <Text style={styles.tarifValue}>{INCOMING_ORDER.tarif}</Text>
-                                </View>
-                            </View>
-                        </View>
+                        {/* Submit button */}
+                        <TouchableOpacity
+                            style={[
+                                styles.submitDocsBtn,
+                                !Object.values(uploadedDocs).every(v => v) && styles.submitDocsBtnDisabled,
+                            ]}
+                            onPress={handleSubmitDocuments}
+                        >
+                            <MaterialIcons name="send" size={18} color={Colors.white} />
+                            <Text style={styles.submitDocsBtnText}>{t('transporter.submitDocuments')}</Text>
+                        </TouchableOpacity>
 
-                        {/* Action Buttons */}
-                        <View style={styles.actionRow}>
-                            <TouchableOpacity
-                                style={[styles.actionBtn, styles.rejectBtn]}
-                                onPress={handleReject}
-                                activeOpacity={0.8}
-                            >
-                                <MaterialIcons name="close" size={28} color={Colors.white} />
-                                <Text style={styles.actionBtnText}>{t('newMission.reject')}</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                                style={[styles.actionBtn, styles.acceptBtn]}
-                                onPress={handleAccept}
-                                activeOpacity={0.8}
-                            >
-                                <MaterialIcons name="check" size={28} color={Colors.white} />
-                                <Text style={styles.actionBtnText}>{t('newMission.accept')}</Text>
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-                </View>
+                        {/* Do it later */}
+                        <TouchableOpacity style={styles.laterBtn} onPress={handleDismissPopup}>
+                            <Text style={styles.laterBtnText}>{t('transporter.doItLater')}</Text>
+                        </TouchableOpacity>
+                    </Animated.View>
+                </Animated.View>
             </Modal>
         </View>
     );
@@ -278,42 +336,6 @@ export default function TransporterHomeScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-    },
-    header: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 24,
-        paddingBottom: 12,
-        backgroundColor: 'rgba(255,255,255,0.90)',
-    },
-    headerLeft: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 12,
-    },
-    avatar: {
-        width: 44, height: 44, borderRadius: 22,
-        backgroundColor: Colors.primary,
-        alignItems: 'center', justifyContent: 'center',
-        borderWidth: 2, borderColor: Colors.white,
-        ...Shadows.floatSm,
-    },
-    greeting: {
-        fontSize: FontSize.xs,
-        fontWeight: FontWeight.medium,
-        color: Colors.slate500,
-    },
-    name: {
-        fontSize: FontSize.lg,
-        fontWeight: FontWeight.bold,
-        color: Colors.slate800,
-    },
-    notifBtn: {
-        width: 44, height: 44, borderRadius: 22,
-        backgroundColor: Colors.white,
-        alignItems: 'center', justifyContent: 'center',
-        ...Shadows.floatSm,
     },
     toggleOuter: {
         paddingHorizontal: 24,
@@ -325,6 +347,9 @@ const styles = StyleSheet.create({
         borderRadius: 30,
         padding: 5,
         position: 'relative',
+    },
+    toggleDisabled: {
+        opacity: 0.7,
     },
     toggleLabels: {
         ...StyleSheet.absoluteFillObject,
@@ -397,148 +422,140 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         ...Shadows.float,
     },
-    // Modal
+    // ── Documents Popup Styles ──
     modalOverlay: {
         flex: 1,
-        justifyContent: 'flex-end',
-        backgroundColor: 'rgba(0,0,0,0.4)',
-    },
-    modalSheet: {
-        backgroundColor: Colors.white,
-        borderTopLeftRadius: 28,
-        borderTopRightRadius: 28,
-        paddingHorizontal: 24,
-        paddingTop: 12,
-    },
-    modalHandle: {
-        width: 40,
-        height: 4,
-        borderRadius: 2,
-        backgroundColor: Colors.slate300,
-        alignSelf: 'center',
-        marginBottom: 16,
-    },
-    modalHeader: {
-        flexDirection: 'row',
+        backgroundColor: 'rgba(0,0,0,0.6)',
+        justifyContent: 'center',
         alignItems: 'center',
-        gap: 12,
-        marginBottom: 20,
+        paddingHorizontal: 24,
     },
-    modalHeaderIcon: {
-        width: 44, height: 44, borderRadius: 22,
-        backgroundColor: Colors.accent,
-        alignItems: 'center', justifyContent: 'center',
+    modalCard: {
+        width: '100%',
+        backgroundColor: Colors.white,
+        borderRadius: 24,
+        padding: 28,
+        alignItems: 'center',
+        ...Shadows.float,
+    },
+    modalIconContainer: {
+        width: 68,
+        height: 68,
+        borderRadius: 34,
+        backgroundColor: Colors.primary,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 16,
+        ...Shadows.float,
     },
     modalTitle: {
         fontSize: FontSize.xl,
         fontWeight: FontWeight.bold,
-        color: Colors.textDark,
-    },
-    // Client
-    clientCard: {
-        backgroundColor: `${Colors.primary}08`,
-        borderRadius: BorderRadius.lg,
-        padding: 16,
-        marginBottom: 16,
-    },
-    clientRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    clientAvatar: {
-        width: 52, height: 52, borderRadius: 26,
-        backgroundColor: `${Colors.primary}15`,
-        alignItems: 'center', justifyContent: 'center',
-    },
-    clientInfo: {
-        flex: 1,
-        marginLeft: 12,
-    },
-    clientName: {
-        fontSize: FontSize.lg,
-        fontWeight: FontWeight.bold,
-        color: Colors.textDark,
-    },
-    ratingRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 4,
-        marginTop: 4,
-    },
-    ratingText: {
-        fontSize: FontSize.sm,
-        fontWeight: FontWeight.bold,
-        color: '#f59e0b',
-        marginLeft: 4,
-    },
-    callBtn: {
-        width: 48, height: 48, borderRadius: 24,
-        backgroundColor: Colors.statusGreen,
-        alignItems: 'center', justifyContent: 'center',
-        ...Shadows.floatSm,
-    },
-    // Details
-    detailsCard: {
-        backgroundColor: Colors.white,
-        borderRadius: BorderRadius.lg,
-        padding: 16,
-        borderWidth: 1,
-        borderColor: Colors.slate100,
-        marginBottom: 20,
-    },
-    detailRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 12,
-        paddingVertical: 10,
-    },
-    detailContent: {
-        flex: 1,
-    },
-    detailLabel: {
-        fontSize: FontSize.xs,
-        color: Colors.slate400,
-        fontWeight: FontWeight.medium,
-    },
-    detailValue: {
-        fontSize: FontSize.base,
-        fontWeight: FontWeight.semibold,
-        color: Colors.textDark,
-        marginTop: 2,
-    },
-    tarifValue: {
-        fontSize: FontSize.lg,
-        fontWeight: FontWeight.bold,
         color: Colors.primary,
-        marginTop: 2,
+        marginBottom: 8,
+        textAlign: 'center',
     },
-    detailDivider: {
-        height: 1,
-        backgroundColor: Colors.slate100,
+    modalSubtitle: {
+        fontSize: FontSize.sm,
+        color: Colors.slate500,
+        textAlign: 'center',
+        lineHeight: 20,
+        marginBottom: 16,
+        paddingHorizontal: 8,
     },
-    // Actions
-    actionRow: {
+    testContainer: {
+        backgroundColor: `${Colors.accent}15`,
+        padding: 12,
+        borderRadius: BorderRadius.lg,
+        borderWidth: 1,
+        borderColor: `${Colors.accent}50`,
         flexDirection: 'row',
-        gap: 16,
+        alignItems: 'center',
+        marginBottom: 16,
+        width: '100%',
     },
-    actionBtn: {
+    testTitle: { fontSize: FontSize.xs, fontWeight: FontWeight.bold, color: Colors.slate800, marginBottom: 2 },
+    testText: { fontSize: FontSize.xs, color: Colors.slate600 },
+    docsList: {
+        width: '100%',
+        gap: 12,
+        marginBottom: 24,
+    },
+    docRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: Colors.backgroundLight,
+        borderRadius: BorderRadius.lg,
+        padding: 14,
+        gap: 12,
+    },
+    docIconBg: {
+        width: 42,
+        height: 42,
+        borderRadius: 12,
+        backgroundColor: `${Colors.primary}15`,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    docIconBgDone: {
+        backgroundColor: `${Colors.statusGreen}15`,
+    },
+    docLabel: {
         flex: 1,
+        fontSize: FontSize.sm,
+        fontWeight: FontWeight.semibold,
+        color: Colors.slate800,
+    },
+    docLabelDone: {
+        color: Colors.statusGreen,
+    },
+    uploadBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        backgroundColor: Colors.primary,
+        paddingHorizontal: 14,
+        paddingVertical: 8,
+        borderRadius: BorderRadius.full,
+    },
+    uploadBtnDone: {
+        backgroundColor: `${Colors.statusGreen}15`,
+    },
+    uploadBtnText: {
+        fontSize: FontSize.xs,
+        fontWeight: FontWeight.bold,
+        color: Colors.white,
+    },
+    uploadBtnTextDone: {
+        color: Colors.statusGreen,
+    },
+    submitDocsBtn: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
         gap: 8,
+        width: '100%',
+        backgroundColor: Colors.primary,
         paddingVertical: 16,
-        borderRadius: BorderRadius.xl,
+        borderRadius: BorderRadius.full,
+        ...Shadows.float,
     },
-    rejectBtn: {
-        backgroundColor: '#ef4444',
+    submitDocsBtnDisabled: {
+        opacity: 0.5,
     },
-    acceptBtn: {
-        backgroundColor: '#22c55e',
-    },
-    actionBtnText: {
-        color: Colors.white,
-        fontSize: FontSize.lg,
+    submitDocsBtnText: {
+        fontSize: FontSize.base,
         fontWeight: FontWeight.bold,
+        color: Colors.white,
+    },
+    laterBtn: {
+        marginTop: 16,
+        paddingVertical: 8,
+    },
+    laterBtnText: {
+        fontSize: FontSize.sm,
+        fontWeight: FontWeight.semibold,
+        color: Colors.slate400,
+        textDecorationLine: 'underline',
     },
 });

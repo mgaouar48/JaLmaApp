@@ -60,6 +60,7 @@ export default function ClientDashboard() {
     const mapRef = useRef<MapView>(null);
     const flatListRef = useRef<FlatList>(null);
     const [location, setLocation] = useState<Location.LocationObject | null>(null);
+    const [locationGranted, setLocationGranted] = useState(false);
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const [sortKey, setSortKey] = useState<SortKey>('distance');
     const [capacityFilter, setCapacityFilter] = useState<CapacityFilter>(0);
@@ -120,10 +121,12 @@ export default function ClientDashboard() {
     const userLat = location?.coords.latitude ?? TLEMCEN.latitude;
     const userLon = location?.coords.longitude ?? TLEMCEN.longitude;
 
+    // Location + initial fetch
     useEffect(() => {
         (async () => {
             const { status } = await Location.requestForegroundPermissionsAsync();
             if (status !== 'granted') return;
+            setLocationGranted(true);
             const loc = await Location.getCurrentPositionAsync({});
             setLocation(loc);
             fetchDrivers(loc.coords.latitude, loc.coords.longitude);
@@ -139,6 +142,27 @@ export default function ClientDashboard() {
         setLoadingDrivers(false);
         if (!error && data) setDrivers(data);
     };
+
+    // Realtime subscription — auto-refresh when any driver goes online/offline
+    useEffect(() => {
+        const channel = supabase
+            .channel('drivers-online-changes')
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'drivers' },
+                () => {
+                    // Re-fetch using saved location or fallback
+                    const lat = location?.coords.latitude ?? TLEMCEN.latitude;
+                    const lon = location?.coords.longitude ?? TLEMCEN.longitude;
+                    fetchDrivers(lat, lon);
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [location]);
 
     const transportersWithDistance = useMemo(() => {
         let list = drivers.filter(d =>
@@ -227,7 +251,7 @@ export default function ClientDashboard() {
                     provider={PROVIDER_GOOGLE}
                     style={StyleSheet.absoluteFillObject}
                     initialRegion={initialRegion}
-                    showsUserLocation={true}
+                    showsUserLocation={locationGranted}
                     showsMyLocationButton={false}
                 >
                     {transportersWithDistance.map((d) => (

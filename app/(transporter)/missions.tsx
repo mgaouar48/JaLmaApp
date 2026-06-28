@@ -1,138 +1,207 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
-    View, Text, StyleSheet, Platform, TouchableOpacity, ScrollView, FlatList,
+    View, Text, StyleSheet, Platform, TouchableOpacity, FlatList, RefreshControl,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Colors, FontSize, FontWeight, BorderRadius, Shadows } from '../../src/constants';
 import { useTranslation } from 'react-i18next';
-
-// Dummy Data
-const MISSIONS = [
-    {
-        id: 'M-2024-001',
-        client: 'Sarah Benali',
-        address: 'Cite 2004 Logements, Bab Ezzouar',
-        date: 'Aujourd\'hui, 10:30',
-        price: '1 200 DA',
-        volume: '2 000 L',
-        status: 'in_progress',
-    },
-    {
-        id: 'M-2024-002',
-        client: 'Hotel El Aurassi',
-        address: '2 Boulevard Frantz Fanon, Alger',
-        date: 'Hier, 14:15',
-        price: '4 500 DA',
-        volume: '6 000 L',
-        status: 'completed',
-    },
-    {
-        id: 'M-2024-003',
-        client: 'Restaurant Le Sommet',
-        address: 'Hydra, Alger',
-        date: '16 Fév, 09:00',
-        price: '2 000 DA',
-        volume: '3 000 L',
-        status: 'completed',
-    },
-    {
-        id: 'M-2024-004',
-        client: 'Ahmed Khelil',
-        address: 'Rue Didouche Mourad, Alger',
-        date: '15 Fév, 11:45',
-        price: '1 500 DA',
-        volume: '2 000 L',
-        status: 'cancelled',
-    },
-    {
-        id: 'M-2024-005',
-        client: 'Clinique Al Azhar',
-        address: 'Dely Ibrahim, Alger',
-        date: '14 Fév, 08:30',
-        price: '3 000 DA',
-        volume: '4 000 L',
-        status: 'completed',
-    },
-];
+import { supabase } from '../../src/lib/supabase';
+import { useAuth } from '../../src/context/AuthContext';
+import { router } from 'expo-router';
 
 const FILTER_KEYS = ['all', 'inProgress', 'completed', 'cancelled'] as const;
+type FilterKey = typeof FILTER_KEYS[number];
+
+interface Order {
+    id: string;
+    client_id: string;
+    status: string;
+    delivery_address: string | null;
+    quantity_liters: number;
+    estimated_price: number | null;
+    created_at: string;
+    client_name?: string;
+}
+
+const STATUS_CONFIG: Record<string, { color: string; bg: string; icon: keyof typeof MaterialIcons.glyphMap; labelKey: string }> = {
+    assigned: { color: Colors.primary, bg: `${Colors.primary}12`, icon: 'assignment', labelKey: 'missions.statusAssigned' },
+    on_route: { color: '#f59e0b', bg: '#fef3c720', icon: 'local-shipping', labelKey: 'missions.statusOnRoute' },
+    completed: { color: Colors.statusGreen, bg: `${Colors.statusGreen}15`, icon: 'check-circle', labelKey: 'missions.statusCompleted' },
+    cancelled: { color: Colors.statusRed, bg: `${Colors.statusRed}12`, icon: 'cancel', labelKey: 'missions.statusCancelled' },
+    pending: { color: Colors.slate400, bg: Colors.slate100, icon: 'hourglass-top', labelKey: 'missions.statusPending' },
+};
 
 export default function MissionsScreen() {
-    const [activeFilter, setActiveFilter] = useState('all');
+    const [activeFilter, setActiveFilter] = useState<FilterKey>('all');
+    const [orders, setOrders] = useState<Order[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
     const { t } = useTranslation();
+    const { session } = useAuth();
 
-    const filteredMissions = MISSIONS.filter((mission) => {
+    const fetchOrders = useCallback(async () => {
+        try {
+            // Get session directly from supabase to ensure we have the latest token
+            const { data: { session: currentSession } } = await supabase.auth.getSession();
+            const userId = currentSession?.user?.id;
+            
+            if (!userId) {
+                console.log('[Missions] No user session found');
+                setLoading(false);
+                return;
+            }
+
+            console.log('[Missions] Fetching orders for driver:', userId);
+
+            const { data, error } = await supabase
+                .from('orders')
+                .select('id, client_id, status, delivery_address, quantity_liters, estimated_price, created_at')
+                .eq('driver_id', userId)
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                console.error('[Missions] Error fetching orders:', error);
+                setLoading(false);
+                return;
+            }
+
+            console.log('[Missions] Orders found:', data?.length ?? 0);
+
+            // Fetch client names
+            const clientIds = [...new Set((data || []).map(o => o.client_id))];
+            let clientMap: Record<string, string> = {};
+            if (clientIds.length > 0) {
+                const { data: profiles } = await supabase
+                    .from('profiles')
+                    .select('id, first_name, last_name')
+                    .in('id', clientIds);
+                if (profiles) {
+                    profiles.forEach(p => {
+                        clientMap[p.id] = `${p.first_name ?? ''} ${p.last_name ?? ''}`.trim() || t('common.unknown');
+                    });
+                }
+            }
+
+            const enriched = (data || []).map(o => ({
+                ...o,
+                client_name: clientMap[o.client_id] || t('common.unknown'),
+            }));
+
+            setOrders(enriched);
+        } catch (err) {
+            console.error('[Missions] Fetch orders error:', err);
+        } finally {
+            setLoading(false);
+            setRefreshing(false);
+        }
+    }, []);
+
+    useEffect(() => { fetchOrders(); }, [fetchOrders]);
+
+    // Subscribe to realtime changes on orders table
+    useEffect(() => {
+        const channel = supabase
+            .channel('driver-orders')
+            .on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'orders',
+            }, () => {
+                fetchOrders();
+            })
+            .subscribe();
+
+        return () => { supabase.removeChannel(channel); };
+    }, [fetchOrders]);
+
+    const onRefresh = () => {
+        setRefreshing(true);
+        fetchOrders();
+    };
+
+    const filteredOrders = orders.filter(o => {
         if (activeFilter === 'all') return true;
-        if (activeFilter === 'inProgress') return mission.status === 'in_progress' || mission.status === 'pending';
-        if (activeFilter === 'completed') return mission.status === 'completed';
-        if (activeFilter === 'cancelled') return mission.status === 'cancelled';
+        if (activeFilter === 'inProgress') return ['assigned', 'on_route'].includes(o.status);
+        if (activeFilter === 'completed') return o.status === 'completed';
+        if (activeFilter === 'cancelled') return o.status === 'cancelled';
         return true;
     });
 
-    const getStatusColor = (status: string) => {
-        switch (status) {
-            case 'in_progress': return '#3b82f6'; // Blue
-            case 'completed': return '#22c55e'; // Green
-            case 'cancelled': return '#ef4444'; // Red
-            default: return Colors.slate400;
-        }
+    const getStatusConfig = (status: string) => STATUS_CONFIG[status] || STATUS_CONFIG.pending;
+
+    const formatDate = (dateStr: string) => {
+        const d = new Date(dateStr);
+        return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
     };
 
-    const getStatusLabel = (status: string) => {
-        switch (status) {
-            case 'in_progress': return t('missions.inProgress');
-            case 'completed': return t('missions.completed');
-            case 'cancelled': return t('missions.cancelled');
-            default: return t('missions.pending');
-        }
-    };
-
-    const renderMissionCard = ({ item }: { item: typeof MISSIONS[0] }) => {
-        const statusColor = getStatusColor(item.status);
+    const renderOrder = ({ item }: { item: Order }) => {
+        const sc = getStatusConfig(item.status);
         return (
-            <TouchableOpacity style={styles.card} activeOpacity={0.9}>
-                {/* Header */}
-                <View style={styles.cardHeader}>
-                    <View style={styles.idContainer}>
-                        <MaterialIcons name="grid-3x3" size={14} color={Colors.slate400} />
-                        <Text style={styles.idText}>{item.id}</Text>
+            <TouchableOpacity style={styles.orderCard} activeOpacity={0.85}>
+                {/* Status badge */}
+                <View style={styles.orderHeader}>
+                    <View style={[styles.statusBadge, { backgroundColor: sc.bg }]}>
+                        <MaterialIcons name={sc.icon} size={14} color={sc.color} />
+                        <Text style={[styles.statusText, { color: sc.color }]}>{t(sc.labelKey)}</Text>
                     </View>
-                    <View style={[styles.statusBadge, { backgroundColor: `${statusColor}15` }]}>
-                        <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
-                        <Text style={[styles.statusText, { color: statusColor }]}>
-                            {getStatusLabel(item.status)}
+                    <Text style={styles.orderDate}>{formatDate(item.created_at)}</Text>
+                </View>
+
+                {/* Client info */}
+                <View style={styles.orderRow}>
+                    <View style={styles.orderIconBg}>
+                        <MaterialIcons name="person" size={18} color={Colors.primary} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                        <Text style={styles.orderLabel}>{t('missions.client')}</Text>
+                        <Text style={styles.orderValue}>{item.client_name}</Text>
+                    </View>
+                </View>
+
+                {/* Address */}
+                {item.delivery_address && (
+                    <View style={styles.orderRow}>
+                        <View style={styles.orderIconBg}>
+                            <MaterialIcons name="place" size={18} color={Colors.statusRed} />
+                        </View>
+                        <View style={{ flex: 1 }}>
+                            <Text style={styles.orderLabel}>{t('missions.deliveryAddress')}</Text>
+                            <Text style={styles.orderValue} numberOfLines={1}>{item.delivery_address}</Text>
+                        </View>
+                    </View>
+                )}
+
+                {/* Bottom row: quantity + price */}
+                <View style={styles.orderFooter}>
+                    <View style={styles.orderStat}>
+                        <MaterialIcons name="opacity" size={16} color={Colors.primary} />
+                        <Text style={styles.orderStatText}>
+                            {item.quantity_liters.toLocaleString('fr-FR')} {t('missions.liters')}
                         </Text>
                     </View>
+                    {item.estimated_price !== null && (
+                        <View style={styles.orderStat}>
+                            <MaterialIcons name="payments" size={16} color={Colors.statusGreen} />
+                            <Text style={[styles.orderStatText, { color: Colors.statusGreen, fontWeight: FontWeight.bold }]}>
+                                {item.estimated_price.toLocaleString('fr-FR')} DA
+                            </Text>
+                        </View>
+                    )}
                 </View>
 
-                {/* Content */}
-                <View style={styles.cardContent}>
-                    <View style={styles.row}>
-                        <MaterialIcons name="person" size={18} color={Colors.primary} />
-                        <Text style={styles.clientName}>{item.client}</Text>
-                    </View>
-                    <View style={styles.row}>
-                        <MaterialIcons name="place" size={18} color={Colors.slate400} />
-                        <Text style={styles.address} numberOfLines={1}>{item.address}</Text>
-                    </View>
-                    <View style={styles.metaRow}>
-                        <View style={styles.metaItem}>
-                            <MaterialIcons name="water-drop" size={16} color={Colors.slate400} />
-                            <Text style={styles.metaText}>{item.volume}</Text>
-                        </View>
-                        <View style={styles.divider} />
-                        <View style={styles.metaItem}>
-                            <MaterialIcons name="schedule" size={16} color={Colors.slate400} />
-                            <Text style={styles.metaText}>{item.date}</Text>
-                        </View>
-                    </View>
-                </View>
-
-                {/* Footer */}
-                <View style={styles.cardFooter}>
-                    <Text style={styles.priceLabel}>{t('missions.totalAmount')}</Text>
-                    <Text style={styles.priceValue}>{item.price}</Text>
-                </View>
+                {/* Action button for assigned orders */}
+                {item.status === 'assigned' && (
+                    <TouchableOpacity
+                        style={styles.startBtn}
+                        onPress={() => router.push({
+                            pathname: '/active-delivery',
+                            params: { orderId: item.id },
+                        })}
+                    >
+                        <MaterialIcons name="navigation" size={18} color={Colors.white} />
+                        <Text style={styles.startBtnText}>{t('missions.startDelivery')}</Text>
+                    </TouchableOpacity>
+                )}
             </TouchableOpacity>
         );
     };
@@ -142,48 +211,51 @@ export default function MissionsScreen() {
             {/* Header */}
             <View style={styles.header}>
                 <Text style={styles.title}>{t('missions.title')}</Text>
+                <TouchableOpacity onPress={onRefresh} style={styles.refreshBtn}>
+                    <MaterialIcons name="refresh" size={22} color={Colors.primary} />
+                </TouchableOpacity>
             </View>
 
             {/* Filters */}
-            <View>
-                <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={styles.filterScroll}
-                >
-                    {FILTER_KEYS.map((key) => (
-                        <TouchableOpacity
-                            key={key}
+            <View style={styles.filterRow}>
+                {FILTER_KEYS.map((key) => (
+                    <TouchableOpacity
+                        key={key}
+                        style={[
+                            styles.filterChip,
+                            activeFilter === key && styles.filterChipActive,
+                        ]}
+                        onPress={() => setActiveFilter(key)}
+                    >
+                        <Text
                             style={[
-                                styles.filterChip,
-                                activeFilter === key && styles.filterChipActive,
+                                styles.filterText,
+                                activeFilter === key && styles.filterTextActive,
                             ]}
-                            onPress={() => setActiveFilter(key)}
                         >
-                            <Text
-                                style={[
-                                    styles.filterText,
-                                    activeFilter === key && styles.filterTextActive,
-                                ]}
-                            >
-                                {t(`missions.filter_${key}`)}
-                            </Text>
-                        </TouchableOpacity>
-                    ))}
-                </ScrollView>
+                            {t(`missions.filter_${key}`)}
+                        </Text>
+                    </TouchableOpacity>
+                ))}
             </View>
 
-            {/* List */}
+            {/* Order list */}
             <FlatList
-                data={filteredMissions}
-                renderItem={renderMissionCard}
+                data={filteredOrders}
                 keyExtractor={(item) => item.id}
+                renderItem={renderOrder}
                 contentContainerStyle={styles.listContent}
                 showsVerticalScrollIndicator={false}
+                refreshControl={
+                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Colors.primary]} />
+                }
                 ListEmptyComponent={
                     <View style={styles.emptyContainer}>
-                        <MaterialIcons name="assignment-late" size={48} color={Colors.slate300} />
+                        <View style={styles.emptyIconBg}>
+                            <MaterialIcons name="assignment" size={48} color={Colors.slate300} />
+                        </View>
                         <Text style={styles.emptyText}>{t('missions.noMissions')}</Text>
+                        <Text style={styles.emptySubtext}>{t('missions.noMissionsSubtitle')}</Text>
                     </View>
                 }
             />
@@ -197,6 +269,9 @@ const styles = StyleSheet.create({
         backgroundColor: Colors.backgroundLight,
     },
     header: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
         paddingHorizontal: 24,
         paddingTop: Platform.OS === 'ios' ? 60 : 48,
         paddingBottom: 16,
@@ -207,15 +282,21 @@ const styles = StyleSheet.create({
         fontWeight: FontWeight.bold,
         color: Colors.textDark,
     },
-    filterScroll: {
+    refreshBtn: {
+        width: 40, height: 40, borderRadius: 20,
+        backgroundColor: `${Colors.primary}10`,
+        alignItems: 'center', justifyContent: 'center',
+    },
+    filterRow: {
+        flexDirection: 'row',
         paddingHorizontal: 24,
-        paddingBottom: 16,
-        gap: 12,
+        paddingVertical: 12,
+        gap: 10,
         backgroundColor: Colors.white,
     },
     filterChip: {
         paddingVertical: 8,
-        paddingHorizontal: 16,
+        paddingHorizontal: 14,
         borderRadius: BorderRadius.full,
         backgroundColor: Colors.slate100,
         borderWidth: 1,
@@ -234,125 +315,113 @@ const styles = StyleSheet.create({
         color: Colors.white,
     },
     listContent: {
-        padding: 24,
-        gap: 16,
+        padding: 20,
         paddingBottom: 100,
+        gap: 12,
     },
-    card: {
+    // Order card
+    orderCard: {
         backgroundColor: Colors.white,
-        borderRadius: BorderRadius.lg,
-        ...Shadows.floatSm,
-        overflow: 'hidden',
+        borderRadius: BorderRadius.xl,
+        padding: 18,
+        ...Shadows.soft,
     },
-    cardHeader: {
+    orderHeader: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding: 16,
-        borderBottomWidth: 1,
-        borderBottomColor: Colors.slate50,
-    },
-    idContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 4,
-    },
-    idText: {
-        fontSize: FontSize.xs,
-        fontWeight: FontWeight.bold,
-        color: Colors.slate400,
-        letterSpacing: 0.5,
+        marginBottom: 14,
     },
     statusBadge: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 6,
-        paddingHorizontal: 8,
-        paddingVertical: 4,
+        gap: 5,
+        paddingHorizontal: 10,
+        paddingVertical: 5,
         borderRadius: BorderRadius.full,
     },
-    statusDot: {
-        width: 6,
-        height: 6,
-        borderRadius: 3,
-    },
     statusText: {
-        fontSize: 10,
+        fontSize: FontSize.xs,
         fontWeight: FontWeight.bold,
-        textTransform: 'uppercase',
     },
-    cardContent: {
-        padding: 16,
+    orderDate: {
+        fontSize: FontSize.xs,
+        color: Colors.slate400,
+    },
+    orderRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
         gap: 12,
+        marginBottom: 10,
     },
-    row: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 10,
+    orderIconBg: {
+        width: 36, height: 36, borderRadius: 10,
+        backgroundColor: `${Colors.primary}10`,
+        alignItems: 'center', justifyContent: 'center',
     },
-    clientName: {
-        fontSize: FontSize.base,
-        fontWeight: FontWeight.bold,
-        color: Colors.textDark,
+    orderLabel: {
+        fontSize: FontSize.xs,
+        color: Colors.slate400,
     },
-    address: {
-        flex: 1,
+    orderValue: {
         fontSize: FontSize.sm,
-        color: Colors.slate500,
+        fontWeight: FontWeight.semibold,
+        color: Colors.slate800,
     },
-    metaRow: {
+    orderFooter: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginTop: 4,
-        backgroundColor: Colors.slate50,
-        padding: 8,
-        borderRadius: BorderRadius.sm,
+        gap: 20,
+        paddingTop: 12,
+        borderTopWidth: 1,
+        borderTopColor: Colors.slate100,
     },
-    metaItem: {
-        flex: 1,
+    orderStat: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+    },
+    orderStatText: {
+        fontSize: FontSize.sm,
+        fontWeight: FontWeight.semibold,
+        color: Colors.slate600,
+    },
+    startBtn: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: 6,
+        gap: 8,
+        marginTop: 14,
+        backgroundColor: Colors.primary,
+        paddingVertical: 12,
+        borderRadius: BorderRadius.full,
+        ...Shadows.button,
     },
-    metaText: {
-        fontSize: FontSize.xs,
-        fontWeight: FontWeight.medium,
-        color: Colors.slate600,
-    },
-    divider: {
-        width: 1,
-        height: 16,
-        backgroundColor: Colors.slate200,
-    },
-    cardFooter: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: 16,
-        backgroundColor: `${Colors.primary}05`,
-        borderTopWidth: 1,
-        borderTopColor: `${Colors.primary}10`,
-    },
-    priceLabel: {
-        fontSize: FontSize.xs,
-        fontWeight: FontWeight.semibold,
-        color: Colors.primary,
-    },
-    priceValue: {
-        fontSize: FontSize.lg,
+    startBtnText: {
+        fontSize: FontSize.sm,
         fontWeight: FontWeight.bold,
-        color: Colors.primary,
+        color: Colors.white,
     },
+    // Empty state
     emptyContainer: {
         alignItems: 'center',
         justifyContent: 'center',
-        paddingTop: 48,
-        gap: 16,
+        paddingTop: 80,
+        gap: 12,
+    },
+    emptyIconBg: {
+        width: 96, height: 96, borderRadius: 48,
+        backgroundColor: Colors.slate100,
+        alignItems: 'center', justifyContent: 'center',
+        marginBottom: 8,
     },
     emptyText: {
-        fontSize: FontSize.base,
-        fontWeight: FontWeight.medium,
+        fontSize: FontSize.lg,
+        fontWeight: FontWeight.bold,
+        color: Colors.slate800,
+    },
+    emptySubtext: {
+        fontSize: FontSize.sm,
         color: Colors.slate400,
     },
 });

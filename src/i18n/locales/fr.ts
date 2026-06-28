@@ -17,6 +17,7 @@ export default {
         min: 'min',
         da: 'DA',
         liters: 'L',
+        unknown: 'Inconnu',
     },
 
     // ── Onboarding ──
@@ -83,6 +84,10 @@ export default {
         confirmPassword: 'Confirmer le mot de passe',
         passwordsMismatch: 'Les mots de passe ne correspondent pas.',
         passwordResetSuccess: 'Votre mot de passe a été réinitialisé.',
+        testClientTitle: 'Compte de Test Client (Appuyez pour remplir)',
+        testTransporterTitle: 'Compte de Test Transporteur (Appuyez)',
+        testEmail: 'Email',
+        testPassword: 'Mot de passe',
     },
 
     // ── Tabs ──
@@ -174,10 +179,46 @@ export default {
         orderAcceptedMsg: 'Vous avez accepté la commande {{id}}',
         // Dashboard
         hello: 'Bonjour',
+        greeting: 'Bonjour',
+        driver: 'Transporteur',
+        noMission: 'Aucune mission active',
         todayRevenue: "Revenu d'aujourd'hui",
         lastTrip: 'Dernier trajet',
         completedOrders: 'Commandes terminées',
         nextMission: 'Prochaine mission',
+        // Documents popup
+        documentsPopupTitle: 'Documents requis',
+        documentsPopupSubtitle: 'Pour commencer à recevoir des commandes, veuillez télécharger vos documents officiels.',
+        carteGrise: 'Carte grise du véhicule',
+        permisConduire: 'Permis de conduire',
+        autorisation: 'Autorisation de transport',
+        uploadDocument: 'Télécharger',
+        uploaded: 'Téléchargé ✓',
+        submitDocuments: 'Soumettre les documents',
+        doItLater: 'Faire plus tard',
+        testFillDocsTitle: 'Test : Remplir les documents',
+        testFillDocsSubtitle: 'Appuyez pour simuler le téléchargement',
+    },
+
+    // ── Missions ──
+    missions: {
+        title: 'Mes Missions',
+        filter_all: 'Toutes',
+        filter_inProgress: 'En cours',
+        filter_completed: 'Terminées',
+        filter_cancelled: 'Annulées',
+        noMissions: 'Aucune mission pour le moment',
+        noMissionsSubtitle: 'Les nouvelles commandes apparaîtront ici',
+        liters: 'litres',
+        client: 'Client',
+        statusAssigned: 'Assignée',
+        statusOnRoute: 'En route',
+        statusCompleted: 'Terminée',
+        statusCancelled: 'Annulée',
+        statusPending: 'En attente',
+        deliveryAddress: 'Adresse de livraison',
+        startDelivery: 'Démarrer la livraison',
+        refresh: 'Actualiser',
     },
 
     // ── New Mission ──
@@ -220,6 +261,8 @@ export default {
         logout: 'Déconnexion',
         myDocuments: 'Mes documents',
         transporterRole: 'Transporteur • Citerne {{capacity}}L',
+        noName: 'Utilisateur',
+        save: 'Sauvegarder',
     },
 
     // ── Language ──
@@ -257,6 +300,36 @@ export default {
         version: 'Version',
     },
 
+    // ── Documents ──
+    documents: {
+        title: 'Mes documents',
+        progressTitle: 'Vos documents',
+        documentsUploaded: 'documents téléchargés',
+        infoBanner: 'Vos documents sont nécessaires pour valider votre compte et pouvoir recevoir des commandes.',
+        requiredDocs: 'Documents requis',
+        notUploaded: 'Non téléchargé',
+        pending: 'En attente de vérification',
+        verified: 'Vérifié',
+        view: 'Consulter',
+        replace: 'Remplacer',
+        uploadSuccess: 'Document téléchargé avec succès !',
+        viewTitle: 'Aperçu du document',
+        viewMessage: 'L\'aperçu du document sera disponible prochainement.',
+    },
+
+    // ── Notifications ──
+    notifications: {
+        title: 'Notifications',
+        emptyTitle: 'Aucune notification',
+        emptySubtitle: 'Vous êtes à jour ! Revenez plus tard.',
+        now: 'Maintenant',
+        today: "Aujourd'hui",
+        docsReminderTitle: 'Documents manquants',
+        docsReminderMessage: 'Veuillez télécharger vos documents (carte grise, permis, autorisation) pour activer votre compte.',
+        welcomeTitle: 'Bienvenue sur Ja-Lma ! 🎉',
+        welcomeMessage: 'Votre compte transporteur a été créé avec succès.',
+    },
+
     // ── Rating ──
     rating: {
         title: 'Évaluation',
@@ -285,17 +358,6 @@ export default {
         promoAppliedMsg: 'Le code {{code}} a été appliqué à votre prochaine commande.',
     },
 
-    // ── Missions ──
-    missions: {
-        title: 'Mes missions',
-        newMission: 'Nouvelle mission',
-        all: 'Toutes',
-        pending: 'En attente',
-        active: 'Actives',
-        done: 'Terminées',
-        noMissions: 'Aucune mission',
-    },
-
     // ── Revenue ──
     revenue: {
         title: 'Revenus',
@@ -303,6 +365,9 @@ export default {
         thisWeek: 'Cette semaine',
         thisMonth: 'Ce mois',
         totalEarnings: 'Gains totaux',
+        totalBalance: 'Solde total',
+        history: 'Historique',
+        noTransactions: 'Aucune transaction',
         trips: 'courses',
     },
 } as const;

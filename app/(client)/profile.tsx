@@ -5,6 +5,7 @@ import { router } from 'expo-router';
 import { Colors, FontSize, FontWeight, BorderRadius, Shadows } from '../../src/constants';
 import { useTranslation } from 'react-i18next';
 import { changeLanguage } from '../../src/i18n';
+import { useAuth } from '../../src/context/AuthContext';
 
 const LANGUAGES = [
     { code: 'ar', label: 'العربية', flag: '🇸🇦' },
@@ -14,9 +15,15 @@ const LANGUAGES = [
 
 export default function ProfileScreen() {
     const { t, i18n } = useTranslation();
+    const { profile, signOut } = useAuth();
     const [langModalVisible, setLangModalVisible] = useState(false);
 
     const currentLang = LANGUAGES.find(l => l.code === i18n.language) || LANGUAGES[0];
+
+    const displayName = profile
+        ? `${profile.first_name ?? ''} ${profile.last_name ?? ''}`.trim() || t('profile.noName')
+        : '';
+    const displayEmail = profile?.email ?? '';
 
     const handleLanguageChange = async (langCode: string) => {
         if (langCode === i18n.language) {
@@ -43,8 +50,8 @@ export default function ProfileScreen() {
                 <View style={styles.avatar}>
                     <MaterialIcons name="person" size={48} color={Colors.white} />
                 </View>
-                <Text style={styles.name}>Karim Benali</Text>
-                <Text style={styles.email}>karim.benali@email.com</Text>
+                <Text style={styles.name}>{displayName}</Text>
+                <Text style={styles.email}>{displayEmail}</Text>
 
                 <View style={styles.menuList}>
                     {[
@@ -70,7 +77,7 @@ export default function ProfileScreen() {
 
                 <TouchableOpacity
                     style={styles.logoutButton}
-                    onPress={() => router.replace('/login')}
+                    onPress={signOut}
                 >
                     <MaterialIcons name="logout" size={20} color={Colors.statusRed} />
                     <Text style={styles.logoutText}>{t('profile.logout')}</Text>
