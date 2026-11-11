@@ -34,6 +34,4 @@ JA_LMA centralise le processus de commande et de livraison au sein d’une appli
 
 JA_LMA vise à moderniser le service de livraison d’eau en le rendant plus accessible, plus organisé et plus efficace. La plateforme cherche également à aider les livreurs à mieux gérer leurs demandes et à optimiser leur activité quotidienne.
 
----
 
-*Remarque : les fonctionnalités présentées doivent correspondre à celles réellement développées ou prévues dans le projet.*
